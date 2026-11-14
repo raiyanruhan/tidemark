@@ -1,0 +1,22 @@
+[Unit]
+Description=Tidemark Flask app
+After=network.target
+
+[Service]
+User=deploy
+Group=deploy
+WorkingDirectory=/var/www/tidemark/python
+Environment="PATH=/var/www/tidemark/venv/bin"
+EnvironmentFile=/var/www/tidemark/shared/.env
+ExecStart=/var/www/tidemark/venv/bin/gunicorn \
+    --workers 1 \
+    --timeout 900 \
+    --bind 127.0.0.1:5050 \
+    --access-logfile /var/log/tidemark/access.log \
+    --error-logfile /var/log/tidemark/error.log \
+    app:app
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
