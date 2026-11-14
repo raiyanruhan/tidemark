@@ -49,7 +49,7 @@
 
 Every existing climate trend tool reports the same thing: significant or not. That binary omits three things - how much more data is needed before a not-yet-significant trend becomes detectable, whether the current record is long enough to resolve the signal at all, and when a significant trend will cross real-world thresholds.
 
-Tidemark answers all three. It runs the Modified Mann-Kendall test with Hamed-Rao autocorrelation correction, computes the detection floor unconditionally, and for any non-significant trend runs three independent crossing-year estimates with divergence detection.
+Tidemark answers all three. It runs the Modified Mann-Kendall test with Hamed-Rao autocorrelation correction, computes the detection floor unconditionally, and for any non-significant trend runs four independent crossing-year estimates with divergence detection.
 
 ```
 $ tidemark analyze --location cairo --var rainfall
@@ -66,6 +66,7 @@ significance trajectory:
   analytical MK     2128   (Gaussian IID - invalid here)
   Weatherhead 1998  2123   (Gaussian - invalid here)
   Monte Carlo       2051   (n=1000, empirical bootstrap)
+  CRB lower bound   2047   (Fisher information floor, any test)
   methods diverge: 77 years
   reason: residual skewness=1.95, normality p<0.001
   trust: Monte Carlo
@@ -108,7 +109,7 @@ tidemark scan --location <name>
 tidemark compare --location <name> --location <name> --var <variable>
 ```
 
-`--years N` restricts to the last N years. Default is the full record from 1981. Named locations include dhaka, chittagong, cairo, nairobi, lagos, mumbai, delhi, karachi, jakarta, manila, bangkok, dakar, lima, london, tokyo. Use `--lat`/`--lon` for anything else.
+`--years N` restricts to the last N years. Default is the full record from 1981. Named locations include dhaka, chittagong, sylhet, rajshahi, bogura, khulna, cairo, nairobi, lagos, mumbai, delhi, karachi, jakarta, manila, bangkok, addis ababa, dakar, lima, bogota, new york, london, tokyo, sydney, beijing, riyadh, islamabad. Use `--lat`/`--lon` for anything else.
 
 ## Variables
 
@@ -123,6 +124,11 @@ tidemark compare --location <name> --location <name> --var <variable>
 | `vpd` | derived | kPa | NASA POWER | 1981 |
 | `dtr` | derived | C | NASA POWER | 1981 |
 | `soil` | GWETROOT | fraction | NASA POWER | 1981 |
+| `surface-soil` | GWETTOP | fraction | NASA POWER | 1981 |
+| `profile-soil` | GWETPROF | fraction | NASA POWER | 1981 |
+| `frost` | FROST_DAYS | days | NASA POWER | 1981 |
+| `soil-temp` | TSOIL1 | C | NASA POWER | 1981 |
+| `skin-temp` | TS | C | NASA POWER | 1981 |
 | `rainfall` | PRECTOTCORR | mm/day | GPM IMERG | 2001 |
 | `ndvi` | MOD13Q1 | ratio | ORNL DAAC MODIS | 2000 |
 | `lst` | MOD11A2.061 | C | AppEEARS MODIS | 2001 |

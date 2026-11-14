@@ -62,7 +62,7 @@ the approximation is good because:
 
 ---
 
-## three-way comparison in output
+## four-way comparison in output
 
 For a not-yet-significant trend:
 
@@ -71,6 +71,7 @@ significance trajectory:
   analytical MK     2031   (n^1.5 growth formula, assumes Gaussian IID)
   Weatherhead 1998  2033   (OLS detection time with ACF correction, φ=0.24)
   Monte Carlo       2031   (n=1000, empirical bootstrap from residuals)
+  CRB lower bound   2030   (Fisher information floor, any test)
   methods agree → high confidence
 ```
 
@@ -81,6 +82,7 @@ significance trajectory:
   analytical MK     2045   (assumes Gaussian IID, invalid here)
   Weatherhead 1998  2046   (OLS detection time, also assumes Gaussian)
   Monte Carlo       2060   (n=1000, empirical bootstrap, captures real distribution)
+  CRB lower bound   2041   (Fisher information floor, correct for skewed noise)
   methods diverge: 15 years
   reason: residual skewness=1.95, normality p<0.001 → non-Gaussian noise delays significance
   trust: Monte Carlo

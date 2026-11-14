@@ -1,7 +1,7 @@
 """
 trajectory.py, significance trajectory: when will the trend become detectable?
 
-Three independent estimates + Cramer-Rao lower bound:
+Four independent estimates:
   1. Analytical MK , n^(3/2) Z-score growth, assumes Gaussian IID
   2. Weatherhead 1998, OLS detection time with AR(1) correction (JGR, doi:10.1029/98JD00995)
   3. Monte Carlo    , empirical bootstrap, only method valid for non-Gaussian noise

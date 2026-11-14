@@ -24,7 +24,7 @@ This is genuinely not in any existing tool. The significance trajectory is the c
 
 ## what the research adds (the real invention)
 
-**Three independent estimates for the crossing year, not one.**
+**Four independent estimates for the crossing year, not one.**
 
 ### 1. analytical MK formula
 
@@ -62,12 +62,13 @@ n* = (3.3 · σ_N / |ω|)^(2/3) · ((1+φ)/(1-φ))^(1/3)
 
 ## the key output: divergence as signal quality
 
-When all three agree (within ~3 years):
+When all four agree (within ~3 years):
 ```
 significance trajectory:
   analytical MK     2031   (MK n^1.5 growth formula)
   Weatherhead 1998  2032   (OLS detection time, φ=0.18)
   Monte Carlo       2031   (n=1000, empirical bootstrap)
+  CRB lower bound   2030   (Fisher information floor, any test)
   methods agree → high confidence in estimate
   85% PI            2028-2035
 ```
@@ -78,6 +79,7 @@ significance trajectory:
   analytical MK     2045   (assumes Gaussian, underestimates here)
   Weatherhead 1998  2046   (assumes Gaussian, underestimates here)
   Monte Carlo       2060   (empirical bootstrap, correct for this data)
+  CRB lower bound   2041   (Fisher information floor, correct for skewed noise)
   methods diverge: 15 years
   reason: precipitation residuals right-skewed (skewness=1.95, normality p<0.001)
   extreme wet years delay downward trend detection
@@ -165,7 +167,7 @@ significance trajectory:
 
 2. Weatherhead's formula has never been applied to POWER API data in a user-facing tool.
 
-3. The three-way comparison (analytical + Weatherhead + MC) with divergence analysis is new.
+3. The four-way comparison (analytical + Weatherhead + MC + CRB) with divergence analysis is new.
 
 4. The detection floor, derived from the analytical formula, is not in any existing MK tool.
 
@@ -183,7 +185,7 @@ See arep.md, e-process.md, optimal-score-are.md for full derivations.
 
 P-values are only valid at a pre-specified sample size. Climate monitoring is continuous.
 Every check of "is p < 0.05 now?" after the initial run inflates the false positive rate.
-Current three-way comparison uses p-values → has this flaw inside the MC trajectory too.
+Current four-way comparison uses p-values → has this flaw inside the MC trajectory too.
 
 Fix: replace p-values with e-processes (anytime-valid). See e-process.md.
 
@@ -209,7 +211,7 @@ Not in any paper or tool.
 
 ### implementation order for AREP
 
-Add to analyze.py after existing three-way comparison:
+Add to analyze.py after existing four-way comparison:
 1. compute_efficiency_metrics(residuals) (see optimal-score-are.md)
 2. Build Lambda_n using score function c_hat
 3. Compute E_n, E_MK, ARE, information gap
@@ -226,7 +228,7 @@ The tool shows him:
 - How many more years (analytical: one equation, no black box)
 - Why it might take longer than expected (non-Gaussian noise, measured and named)
 - Whether it will EVER become significant (detection floor: is the slope above the noise floor?)
-- Three methods confirming each other, or disagreeing and explaining why
+- Four methods confirming each other, or disagreeing and explaining why
 
 He will not have seen this before.
 
