@@ -1,9 +1,7 @@
 <p align="center"><img src="assets/logo.png" alt="tidemark" width="420"></p>
 
-# tidemark
-
-pulls NASA Earth science data for any location and runs statistical trend analysis.
-tells you not just whether a variable is trending, but when it becomes significant
+This tool can pull NASA Earth science data for any location and run statistical trend analysis.
+It tells you not just whether a variable is trending, but when it becomes significant
 and what it crosses after that.
 
 ```
