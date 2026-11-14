@@ -638,17 +638,47 @@ new Chart(document.getElementById('ts-chart'), {
     }
   };
 
+  /* invisible datasets for each percentile so tooltip fires over fan region */
+  var fanNulls = vals.map(function() { return null; });
+  var PCT_LABELS = ['P10','P25','P40','P50 (median)','P60','P75','P90'];
+  var PCT_VALUES = [10, 25, 40, 50, 60, 75, 90];
+  var fanDatasets = PCT_VALUES.map(function(p, i) {
+    var data = fanNulls.concat(Array.from({length: displayT}, function(_, j) {
+      return cols[j].length ? pct(cols[j], p) : null;
+    }));
+    return {
+      label: PCT_LABELS[i], data: data,
+      borderColor: 'transparent', backgroundColor: 'transparent',
+      borderWidth: 0, pointRadius: 0, tension: 0.1, spanGaps: false,
+    };
+  });
+
   new Chart(document.getElementById('fan-chart-canvas'), {
     type: 'line',
     data: { labels: allLabels, datasets: [{
       label: 'Observed', data: histData,
       borderColor: '#06c', backgroundColor: 'transparent',
       borderWidth: 2, pointRadius: 2, tension: 0.1, spanGaps: false,
-    }]},
+    }].concat(fanDatasets)},
     options: {
       responsive: true, maintainAspectRatio: false, animation: false,
       interaction: { mode: 'index', intersect: false },
-      plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false } },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          mode: 'index', intersect: false,
+          filter: function(item) {
+            /* hide null entries and suppress fan datasets over history region */
+            return item.parsed.y != null;
+          },
+          callbacks: {
+            label: function(item) {
+              if (item.datasetIndex === 0) return ' Observed: ' + item.parsed.y.toFixed(2);
+              return ' ' + item.dataset.label + ': ' + item.parsed.y.toFixed(2);
+            }
+          }
+        }
+      },
       scales: {
         x: { ticks: { color: '#666', maxTicksLimit: 12 }, grid: { color: '#e5e5e5' } },
         y: { ticks: { color: '#666' }, grid: { color: '#e5e5e5' },
