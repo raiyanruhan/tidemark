@@ -26,7 +26,8 @@ jobs:
           script: |
             set -e
             cd /var/www/tidemark
-            git pull origin main
+            git fetch origin main
+            git reset --hard origin/main
             venv/bin/pip install -q -r python/requirements.txt
             sudo systemctl restart tidemark
             echo "Deploy complete"
