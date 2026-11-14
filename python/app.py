@@ -491,5 +491,13 @@ def serve_whitepaper():
     return send_file(pdf, mimetype='application/pdf', download_name='tidemark-whitepaper.pdf', as_attachment=False)
 
 
+@app.route("/slides.pdf")
+def serve_slides():
+    pdf = os.path.abspath(os.path.join(
+        os.path.dirname(__file__), '..', 'research', 'slides', 'slides.pdf'
+    ))
+    return send_file(pdf, mimetype='application/pdf', download_name='tidemark-slides.pdf', as_attachment=False)
+
+
 if __name__ == "__main__":
     app.run(debug=True, port=5000)

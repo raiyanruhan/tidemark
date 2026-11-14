@@ -107,17 +107,22 @@ td.num {
 .nav-link-plain {
   display: inline-flex;
   align-items: center;
-  color: rgba(255,255,255,0.65) !important;
+  gap: 0.4rem;
+  color: rgba(255,255,255,0.75) !important;
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 0;
   padding: 0.3rem 1.0rem;
   font-size: 0.875rem;
   font-weight: 400;
   text-decoration: none;
-  transition: color 0.12s ease;
+  transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease;
   white-space: nowrap;
 }
 
 .nav-link-plain:hover,
 .nav-link-plain:focus {
+  border-color: rgba(255,255,255,0.55);
+  background-color: rgba(255,255,255,0.06);
   color: #fff !important;
   text-decoration: none;
 }
