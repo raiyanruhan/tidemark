@@ -94,7 +94,7 @@ def _fetch_chunk(session, lat, lon, start_str, end_str):
         return []
 
 
-def fetch_ndvi_monthly(lat, lon, start_year, end_year):
+def fetch_ndvi_monthly(lat, lon, start_year, end_year, progress=None):
     """
     {year: {month: ndvi}} using MODIS MOD13Q1 16-day composites.
     start_year clamped to MODIS_EPOCH (2000). Returns {} on total failure.
@@ -122,6 +122,8 @@ def fetch_ndvi_monthly(lat, lon, start_year, end_year):
 
     chunks = _date_chunks(capped_start, end_year_int)
     all_records = []
+    total = len(chunks)
+    done  = 0
     # max_workers=2: reliable at ORNL DAAC throughput; higher values cause drops.
     with requests.Session() as session, ThreadPoolExecutor(max_workers=2) as pool:
         futures = {
@@ -131,6 +133,9 @@ def fetch_ndvi_monthly(lat, lon, start_year, end_year):
         failed = []
         for future in as_completed(futures):
             records = future.result()
+            done += 1
+            if progress:
+                progress(f"Downloading vegetation data: {done} of {total}")
             if records:
                 all_records.extend(records)
             else:

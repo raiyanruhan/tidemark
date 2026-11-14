@@ -62,7 +62,7 @@ def crb_detection_year(omega, I_fisher, sigma_n, phi, n_obs, last_year):
 
 
 def run_monte_carlo(vals, slope, intercept, residuals, z_score, last_year,
-                    collect_paths=False):
+                    collect_paths=False, progress=None):
     """
     Bootstrap-extend the series N_SIM times using empirical residual resampling.
     Returns (crossing_years, never_crossed, sample_paths).
@@ -76,6 +76,8 @@ def run_monte_carlo(vals, slope, intercept, residuals, z_score, last_year,
     sample_paths   = [] if collect_paths else None
 
     for sim_idx in range(N_SIM):
+        if progress and sim_idx > 0 and sim_idx % 200 == 0:
+            progress(f"Running simulation: {sim_idx} of {N_SIM}")
         noise   = np.random.choice(residuals, size=HORIZON, replace=True)
         crossed = False
         path    = [] if (collect_paths and sim_idx < N_FAN_PATHS) else None
@@ -138,7 +140,7 @@ def compute_pvalue_series(vals, years, last_year):
 
 
 def compute_trajectory(vals, slope, intercept, residuals, z_score,
-                       sigma_n, phi, n, last_year, eff):
+                       sigma_n, phi, n, last_year, eff, progress=None):
     """
     Assemble all four trajectory estimates into a single result dict.
     Call only when trend is NOT yet significant.
@@ -154,7 +156,7 @@ def compute_trajectory(vals, slope, intercept, residuals, z_score,
 
     crossing_years, never_crossed, sample_paths = run_monte_carlo(
         vals, slope, intercept, residuals, z_score, last_year,
-        collect_paths=True,
+        collect_paths=True, progress=progress,
     )
 
     if crossing_years:

@@ -271,13 +271,13 @@ def _run_full(lat, lon, code, start, end, progress=None):
         annual          = compute_compound_series(lat, lon, code, start, end)
         monthly_by_year = None
     elif code in MODIS_PARAMS or code in APPEEARS_PARAMS:
-        monthly_by_year = fetch_monthly(lat, lon, code, start, end)
+        monthly_by_year = fetch_monthly(lat, lon, code, start, end, progress)
         annual          = monthly_to_annual_min(monthly_by_year, min_months=6)
         if len(annual) < 10:
             annual = monthly_to_annual_min(monthly_by_year, min_months=4)
         monthly_by_year = None
     else:
-        monthly_by_year = fetch_monthly(lat, lon, code, start, end)
+        monthly_by_year = fetch_monthly(lat, lon, code, start, end, progress)
         annual          = monthly_to_annual(monthly_by_year)
 
     if len(annual) < 10:

@@ -49,7 +49,7 @@ PARAM_META = {
 }
 
 
-def fetch_monthly(lat, lon, param, start, end):
+def fetch_monthly(lat, lon, param, start, end, progress=None):
     """
     {year: {month: value}} for all valid monthly values.
     Routes to the appropriate source based on param:
@@ -60,15 +60,15 @@ def fetch_monthly(lat, lon, param, start, end):
     """
     if param in MODIS_PARAMS:
         from fetch_modis import fetch_ndvi_monthly
-        return fetch_ndvi_monthly(lat, lon, start, end)
+        return fetch_ndvi_monthly(lat, lon, start, end, progress)
 
     if param in GESDISC_PARAMS:
         from fetch_gesdisc import fetch_precip_monthly
-        return fetch_precip_monthly(lat, lon, start, end)
+        return fetch_precip_monthly(lat, lon, start, end, progress)
 
     if param in APPEEARS_PARAMS:
         from fetch_appeears import fetch_appeears_monthly
-        return fetch_appeears_monthly(lat, lon, param, start, end)
+        return fetch_appeears_monthly(lat, lon, param, start, end, progress)
 
     resp = requests.get(
         POWER_URL,

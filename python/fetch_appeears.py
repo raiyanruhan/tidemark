@@ -108,7 +108,7 @@ def _submit_task(token, lat, lon, product, layer, start_year, end_year):
     return resp.json()["task_id"]
 
 
-def _poll_task(token, task_id, timeout=600):
+def _poll_task(token, task_id, timeout=600, progress=None):
     """
     Poll until task status is 'done' or timeout expires.
     Returns True on success, False on error or timeout.
@@ -117,6 +117,7 @@ def _poll_task(token, task_id, timeout=600):
     headers  = {"Authorization": f"Bearer {token}"}
     deadline = time.time() + timeout
     delay    = 10
+    start    = time.time()
     while time.time() < deadline:
         time.sleep(delay)
         resp = requests.get(
@@ -126,6 +127,9 @@ def _poll_task(token, task_id, timeout=600):
         )
         resp.raise_for_status()
         status = resp.json().get("status", "")
+        if progress:
+            elapsed = int(time.time() - start)
+            progress(f"NASA satellite data: processing... ({elapsed}s)")
         if status == "done":
             return True
         if status in ("error", "deleted"):
@@ -270,7 +274,7 @@ def _task_status(token, task_id):
     return resp.json().get("status", "unknown")
 
 
-def fetch_appeears_monthly(lat, lon, var_key, start_year, end_year):
+def fetch_appeears_monthly(lat, lon, var_key, start_year, end_year, progress=None):
     """
     {year: {month: physical_value}} for an AppEEARS MODIS product.
     var_key: 'LST' (land surface temperature, deg C) or 'ET_MOD16' (mm/day).
@@ -333,7 +337,9 @@ def fetch_appeears_monthly(lat, lon, var_key, start_year, end_year):
         except Exception:
             pass
 
-    if not _poll_task(token, task_id, timeout=600):
+    if progress:
+        progress("NASA satellite data: queued, waiting for processing...")
+    if not _poll_task(token, task_id, timeout=600, progress=progress):
         # still not done: tell caller to retry
         raise RuntimeError(
             f"AppEEARS task {task_id} not done after 600s (status=pending/processing). "

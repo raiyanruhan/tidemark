@@ -147,7 +147,7 @@ def _cache_path(lat, lon, start_year, end_year):
     )
 
 
-def fetch_precip_monthly(lat, lon, start_year, end_year):
+def fetch_precip_monthly(lat, lon, start_year, end_year, progress=None):
     """
     {year: {month: mm/day}} using GPM IMERG satellite precipitation.
     start_year clamped to GPM_EPOCH (2001). Returns {} on total failure.
@@ -184,6 +184,8 @@ def fetch_precip_monthly(lat, lon, start_year, end_year):
     ]
 
     by_year = {}
+    total   = len(pairs)
+    done    = 0
     # max_workers=4: GES DISC rate-limits aggressive concurrency; 4 is reliable.
     with ThreadPoolExecutor(max_workers=4) as pool:
         future_to_ym = {
@@ -194,6 +196,9 @@ def fetch_precip_monthly(lat, lon, start_year, end_year):
         for future in as_completed(future_to_ym):
             year, month = future_to_ym[future]
             val = future.result()
+            done += 1
+            if progress and done % 30 == 0:
+                progress(f"Downloading rainfall data: {done} of {total} months")
             if val is not None:
                 by_year.setdefault(year, {})[month] = val
             else:
