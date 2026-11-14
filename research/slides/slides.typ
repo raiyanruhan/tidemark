@@ -13,16 +13,19 @@
   config-info(
     title: [tidemark],
     subtitle: [Not just whether a trend is real. *When.*],
-    author: [Raiyan Bin Rashid, Bangladesh, Team Hylith],
-    date: [NASA Space Apps Challenge 2026],
+    author: [
+      Raiyan Bin Rashid · Jotirmoy Bhowmik · Zunaeid Siddique · Nahin Rahman \
+      #text(size: 0.85em)[Team Hylith · Bangladesh]
+    ],
+    date: [NASA Space Apps Challenge 2026 — Be An Earth System Trend Detective],
   ),
 )
 
+// Slide 1: Title
 #title-slide()
 
-= Impact
-
-== The Unanswered Question
+// Slide 2: Problem
+== The Gap Every Tool Leaves Open
 
 #cols[
   Every existing tool stops here:
@@ -31,11 +34,21 @@
   p-value   0.112   not yet significant
   ```
 
+  #v(0.4em)
+
   Farmers plan 10-year rotations. \
   Policymakers fund flood walls. \
   *They need a year. Not a p-value.*
+
+  #v(0.4em)
+
+  #text(size: 0.78em, style: "italic")[
+    "Sometimes all a trend needs to become significant \
+    is a longer period." \
+    — Dr. James Aker, NASA Goddard
+  ]
 ][
-  *tidemark answers the next two questions:*
+  *tidemark answers two new questions:*
 
   #v(0.5em)
 
@@ -48,23 +61,90 @@
   significance trajectory:
     Monte Carlo   2037
     85% PI        2028 to 2053
+
+  milestones (once significant):
+    Paris +1.5C   2066
+    Paris +2.0C   2079
   ```
 ]
 
-#focus-slide[
-  "Sometimes all a trend needs to become \
-  significant is a longer period."
-
-  #v(1em)
-  #text(size: 0.65em)[Dr. James Aker, NASA Goddard Space Flight Center (challenge author)]
-]
-
-= Creativity
-
-== Significance Trajectory
+// Slide 3: User experience — what it looks like to run it
+== Using tidemark
 
 #cols[
-  *Three independent estimates and a floor:*
+  *Any location. Any NASA variable. One command.*
+
+  #v(0.3em)
+
+  ```
+  $ tidemark analyze \
+      --location dhaka \
+      --var lst
+  ```
+
+  #v(0.5em)
+
+  No sign-up. No dashboard. \
+  Single binary. Runs offline after first fetch. \
+  *Result in seconds.*
+][
+  ```
+  location   Dhaka, Bangladesh (23.81N, 90.41E)
+  variable   land surface temp (LST, C)
+  period     2001 - 2025  (25 years)
+  test       Modified Mann-Kendall (Hamed-Rao)
+
+  trend      +0.037 C / year
+  p-value    0.018   significant
+
+  Paris +1.5C   2066
+  Paris +2.0C   2079
+  ```
+
+  #v(0.3em)
+  #text(size: 0.78em)[Live NASA AppEEARS MODIS data. Not synthetic.]
+]
+
+// Slide 4: How it works + NASA data
+== Powered by NASA Open Data
+
+#cols[
+  #table(
+    columns: (auto, auto, auto),
+    stroke: none,
+    inset: (x: 0.4em, y: 0.5em),
+    table.hline(),
+    [*NASA Source*], [*Variable*], [*Record*],
+    table.hline(stroke: 0.5pt),
+    [POWER / MERRA-2], [temp, wind, humidity, soil], [1981–now],
+    [GES DISC GPM IMERG], [precipitation], [2001–now],
+    [AppEEARS MODIS], [land surface temp], [2001–now],
+    [ORNL DAAC MODIS], [NDVI vegetation], [2000–now],
+    table.hline(),
+  )
+
+  #v(0.4em)
+  #text(size: 0.82em)[ENSO correction via NOAA MEI v2 strips \
+  El Niño variability to isolate the forced trend.]
+][
+  *Analysis pipeline:*
+
+  + Rust CLI resolves location → lat/lon
+  + Python fetches from correct NASA API
+  + Hamed-Rao MK · Sen's slope · Pettitt changepoint
+  + Monte Carlo bootstrap projects detection year
+  + Milestones computed once significant
+
+  #v(0.3em)
+  Up to *45 years* of Earth observation data. \
+  *Any region on Earth.*
+]
+
+// Slide 5: Significance trajectory — the core invention
+== The Significance Trajectory
+
+#cols[
+  *Three independent estimates + information floor:*
 
   #v(0.3em)
 
@@ -73,152 +153,83 @@
     stroke: none,
     inset: (x: 0.4em, y: 0.5em),
     table.hline(),
-    [*Method*], [*Assumption*],
+    [*Method*], [*Models*],
     table.hline(stroke: 0.5pt),
     [Analytical MK], [Gaussian IID noise],
-    [Weatherhead 1998], [AR(1) corrected],
+    [Weatherhead 1998], [AR(1) autocorrelation],
     text(fill: rgb("#58a6ff"), weight: "bold")[Monte Carlo],
-    text(fill: rgb("#58a6ff"))[empirical bootstrap],
+    text(fill: rgb("#58a6ff"))[empirical bootstrap — trusted],
     [CRB lower bound], [Fisher information floor],
     table.hline(),
   )
 
   #v(0.3em)
-  If methods diverge over 5 years: prints why, trusts Monte Carlo.
+  If methods diverge: prints why. Trusts Monte Carlo.
 ][
-  *Dhaka rainfall, not yet significant:*
+  *Dhaka annual rainfall — not yet significant:*
 
   ```
-  p-value  0.385  not yet significant
-  slope    -0.016 mm/day per year
+  p-value  0.385   not yet significant
+  slope    -0.016  mm/day per year
 
-  Monte Carlo   2037  (n=1000, correct)
-  Weatherhead   2028  (OLS, AR(1))
-  analytical    2042  (IID approx)
-
-  85% PI        2028 to 2053
+  significance trajectory:
+    Monte Carlo   2037  (n=1000, correct)
+    Weatherhead   2028  (OLS, AR(1))
+    analytical    2042  (IID approx)
+    85% PI        2028 to 2053
   ```
 
-  The math has always been there. \
-  *Nobody built this into a tool.*
+  *The math has always existed. \
+  Nobody built it into a tool.*
 ]
 
-= Validity
-
-== Architecture
-
-#cols[
-  *Pipeline:*
-
-  + *Rust CLI*: parse args, resolve location to lat/lon \
-    (embedded 25-city table, zero network overhead)
-  + *Python fetch*: route variable to correct NASA source
-  + *Analysis*: Hamed-Rao MK, Sen's slope, ENSO \
-    correction, Pettitt changepoint, detection floor
-  + *Output*: milestones if significant; \
-    trajectory if not
-
-  #v(0.5em)
-  Single binary. No server. No database.
-][
-  ```
-  tidemark (Rust)
-    resolve "dhaka" to 23.81N, 90.41E
-    spawn python analyze.py --lat ...
-    read stdout JSON
-    format aligned terminal output
-
-  python/analyze.py
-    route variable to fetch module
-    run Mann-Kendall pipeline
-    run Monte Carlo (p > 0.05 only)
-    print JSON to stdout
-  ```
-]
-
-= Relevance
-
-== Four NASA Data Sources
-
-#cols[
-  #table(
-    columns: (auto, auto, auto),
-    stroke: none,
-    inset: (x: 0.4em, y: 0.5em),
-    table.hline(),
-    [*Source*], [*Variable*], [*Coverage*],
-    table.hline(stroke: 0.5pt),
-    [NASA POWER / MERRA-2], [temp, humidity, wind, soil], [1981 to present],
-    [GES DISC GPM IMERG V07B], [precipitation], [2001 to present],
-    [AppEEARS MODIS MOD11A2], [land surface temp], [2001 to present],
-    [ORNL DAAC MOD13Q1], [NDVI vegetation], [2000 to present],
-    table.hline(),
-  )
-][
-  *Challenge criteria, exceeded:*
-
-  #v(0.3em)
-
-  - Earth science variables from NASA missions
-  - Any region (name or lat/lon)
-  - Time series up to 45 years
-  - Mann-Kendall significance test and rate of change
-  - *Projects when the trend becomes significant*
-  - *Projects what threshold it crosses after that*
-
-  #v(0.3em)
-  #text(size: 0.82em)[Also: ENSO correction via NOAA MEI v2 strips \
-  El Nino variability to isolate the forced trend.]
-]
-
-= Results
-
+// Slide 6: Live results across three variables
 == Live Findings from Dhaka
 
 #cols(columns: (1fr, 1fr, 1fr))[
   *Land Surface Temp* \
-  #text(size: 0.78em)[MODIS MOD11A2, 2001 to 2025]
+  #text(size: 0.78em)[MODIS · 2001–2025]
 
   #v(0.3em)
 
   ```
-  trend  +0.037 C per year
-  p      0.018  significant
+  trend  +0.037 C/yr
+  p      0.018  ✓
 
-  Paris +1.5C   2066
-  Paris +2.0C   2079
+  +1.5C  2066
+  +2.0C  2079
   ```
 ][
   *Annual Rainfall* \
-  #text(size: 0.78em)[GPM IMERG, 2001 to 2025]
+  #text(size: 0.78em)[GPM IMERG · 2001–2025]
 
   #v(0.3em)
 
   ```
   p      0.385  not yet
   slope  -0.016 mm/day/yr
-  floor  0.23x
 
   MC     2037
-  85% PI 2028 to 2053
+  PI     2028–2053
   ```
 ][
-  *Air Temperature 2m* \
-  #text(size: 0.78em)[POWER MERRA-2, 1981 to 2025]
+  *Air Temperature* \
+  #text(size: 0.78em)[POWER MERRA-2 · 1981–2025]
 
   #v(0.3em)
 
   ```
-  p      0.047  significant
-  slope  -0.021 C per year
+  p      0.047  ✓
+  slope  -0.021 C/yr
   tau    -0.361
   chgpt  1999
   ```
 ]
 
 #v(0.4em)
-#text(size: 0.8em, style: "italic")[All findings from live NASA API calls. Not synthetic data.]
+#text(size: 0.8em, style: "italic")[All from live NASA API calls.]
 
+// Slide 7: Closing
 #focus-slide[
   A tool that gives policy *a year.*
 
@@ -232,4 +243,10 @@
 
   Paris +1.5C   2066
   ```
+
+  #v(0.8em)
+  #text(size: 0.65em)[
+    Team Hylith · Raiyan Bin Rashid · Jotirmoy Bhowmik · \
+    Zunaeid Siddique · Nahin Rahman · Bangladesh
+  ]
 ]
