@@ -44,9 +44,10 @@ from decompose import fetch_enso, enso_correct
 
 app = Flask(__name__)
 
-# In-memory result store: token -> result bundle.
-# Consumed on first read; no expiry needed for single-session demo use.
+# In-memory result store: token -> (stored_at, result bundle).
+# Expires after 10 minutes; not consumed on read so the link stays shareable.
 _result_store = {}
+_RESULT_TTL    = 600  # seconds
 
 #, location registry --------------------------------------------------
 # Same cities as src/locations.rs. lat, lon, display name.
@@ -382,11 +383,11 @@ def analyze_stream():
             yield f"data: {json.dumps({'type': 'error', 'msg': error_ref[0]})}\n\n"
         else:
             token = uuid.uuid4().hex[:16]
-            _result_store[token] = dict(
+            _result_store[token] = (time.time(), dict(
                 result=result_ref[0], display=display,
                 label=label, unit=unit, code=code,
                 start=start, end=end, lat=lat, lon=lon,
-            )
+            ))
             yield f"data: {json.dumps({'type': 'done', 'token': token})}\n\n"
 
     resp = Response(stream_with_context(generate()), mimetype="text/event-stream")
@@ -398,12 +399,19 @@ def analyze_stream():
 @app.route("/result/<token>")
 def result_page(token):
     """Render result from token stored by /analyze/stream."""
-    if token not in _result_store:
+    # Purge expired entries on each visit to prevent unbounded memory growth.
+    now = time.time()
+    expired = [k for k, (ts, _) in _result_store.items() if now - ts > _RESULT_TTL]
+    for k in expired:
+        del _result_store[k]
+
+    entry = _result_store.get(token)
+    if not entry or now - entry[0] > _RESULT_TTL:
         return render_template("index.html",
-                               error="Result not found or expired.",
+                               error="Result not found or expired (links last 10 minutes).",
                                locations=sorted(LOCATIONS.items()),
                                variables=VARIABLES)
-    d = _result_store.pop(token)
+    _, d = entry
     summary = generate_summary(d["result"], d["display"], d["label"], d["unit"])
     return render_template("result.html",
                            result=d["result"], display=d["display"],
