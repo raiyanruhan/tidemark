@@ -1,12 +1,12 @@
 """
 seasonal.py, seasonal breakdown via Hamed-Rao Mann-Kendall on quarterly means.
-DJF/MAM/JJA/SON use calendar-year grouping (DJF = Dec/Jan/Feb of same year).
+DJF: Dec of prior year + Jan/Feb of labelled year (standard meteorological convention).
+MAM/JJA/SON: same-year grouping.
 """
 import numpy as np
 import pymannkendall as mk
 
-SEASONS = [
-    ("DJF", [12, 1, 2]),
+_SAME_YEAR_SEASONS = [
     ("MAM", [3, 4, 5]),
     ("JJA", [6, 7, 8]),
     ("SON", [9, 10, 11]),
@@ -17,15 +17,28 @@ def monthly_to_seasonal(monthly_by_year):
     """
     {season: [(year, mean)]} for DJF/MAM/JJA/SON.
     Year dropped if any of the 3 months is missing.
+    DJF year Y = Dec[Y-1] + Jan[Y] + Feb[Y].
     """
     result = {}
-    for name, months in SEASONS:
+
+    # DJF: standard meteorological convention
+    djf_series = []
+    for year in sorted(monthly_by_year):
+        prev = monthly_by_year.get(year - 1, {})
+        curr = monthly_by_year[year]
+        if 12 in prev and 1 in curr and 2 in curr:
+            djf_series.append((year, float(np.mean([prev[12], curr[1], curr[2]]))))
+    result["DJF"] = djf_series
+
+    # MAM, JJA, SON: same-calendar-year grouping
+    for name, months in _SAME_YEAR_SEASONS:
         series = []
         for year in sorted(monthly_by_year):
             m = monthly_by_year[year]
             if all(mo in m for mo in months):
                 series.append((year, float(np.mean([m[mo] for mo in months]))))
         result[name] = series
+
     return result
 
 
