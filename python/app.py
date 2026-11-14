@@ -262,6 +262,13 @@ def _resolve_variable(form):
 
 def _run_full(lat, lon, code, start, end, progress=None):
     """Fetch real data and run full analysis pipeline. No caching."""
+    # Clamp to actual data availability — no source has data outside 1981-2025.
+    # Prevents absurd ranges from hammering NASA APIs with guaranteed-empty requests.
+    start = max(int(start), 1981)
+    end   = min(int(end),   2025)
+    if start >= end:
+        raise ValueError("Start year must be before end year.")
+
     def emit(msg):
         if progress:
             progress(msg)
