@@ -10,7 +10,7 @@ pub fn resolve_location(name: &str) -> Option<(f64, f64, String)> {
 // (aliases, lat, lon, display_name)
 static LOCATIONS: &[(&[&str], f64, f64, &str)] = &[
     (&["dhaka"],                   23.81,  90.41,  "Dhaka, Bangladesh"),
-    (&["chittagong", "chattogram"], 22.36,  91.80,  "Chittagong, Bangladesh"),
+    (&["chittagong", "chattogram"], 22.33,  91.84,  "Chittagong, Bangladesh"),
     (&["sylhet"],                  24.90,  91.87,  "Sylhet, Bangladesh"),
     (&["rajshahi"],                24.37,  88.60,  "Rajshahi, Bangladesh"),
     (&["khulna"],                  22.82,  89.55,  "Khulna, Bangladesh"),
@@ -18,7 +18,7 @@ static LOCATIONS: &[(&[&str], f64, f64, &str)] = &[
     (&["nairobi"],                 -1.29,  36.82,  "Nairobi, Kenya"),
     (&["lagos"],                    6.52,   3.38,  "Lagos, Nigeria"),
     (&["mumbai"],                  19.08,  72.88,  "Mumbai, India"),
-    (&["delhi", "new delhi"],      28.70,  77.10,  "Delhi, India"),
+    (&["delhi", "new delhi"],      28.61,  77.21,  "Delhi, India"),
     (&["karachi"],                 24.86,  67.01,  "Karachi, Pakistan"),
     (&["jakarta"],                 -6.21, 106.85,  "Jakarta, Indonesia"),
     (&["manila"],                  14.60, 120.98,  "Manila, Philippines"),
