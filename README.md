@@ -1,3 +1,5 @@
+<p align="center"><img src="assets/logo.png" alt="tidemark" width="420"></p>
+
 # tidemark
 
 pulls NASA Earth science data for any location and runs statistical trend analysis.

@@ -5,6 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}tidemark{% endblock %}</title>
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='assets/favicon.png') }}">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link
@@ -17,8 +18,7 @@
 <body class="is-paper">
 
   <header class="bar">
-    <a class="mark nav-wordmark" href="/"><span class="wm-bracket">~</span><span class="wm-first">tide</span><span
-        class="wm-second">mark</span><span class="wm-bracket">~</span></a>
+    <a class="mark nav-wordmark" href="/"><img src="{{ url_for('static', filename='assets/logo.png') }}" alt="tidemark" style="height:1.25rem;width:auto;vertical-align:middle;display:block"></a>
     <nav class="bar-nav" aria-label="Site navigation">
       <a href="/how-it-works">How it works</a>
       <a class="bar-icon-btn tip" href="https://youtu.be/RtjjsavL14w" target="_blank" rel="noopener"
@@ -54,7 +54,7 @@
   <footer class="p-strip is-dark">
     <div class="row">
       <div class="col-3">
-        <p class="u-no-margin--bottom">NASA Space Apps 2026</p>
+        <a href="/"><img src="{{ url_for('static', filename='assets/logo.png') }}" alt="tidemark" style="height:1.25rem;width:auto;display:block;margin-bottom:0.5rem"></a>
       </div>
       <nav class="col-3" aria-label="Footer">
         <ul class="p-list u-no-margin--bottom">
@@ -74,7 +74,7 @@
             <a class="is-dark" href="https://psl.noaa.gov/enso/mei/" target="_blank">NOAA MEI v2</a>
           </li>
           <li class="p-list__item">
-            <a class="is-dark" href="https://www.spaceappschallenge.org/2026/challenges/" target="_blank">Space Apps
+            <a class="is-dark" href="https://www.spaceappschallenge.org/2026/challenges/earth-system-trend-detective/" target="_blank">NASA Space Apps
               Challenge</a>
           </li>
         </ul>
