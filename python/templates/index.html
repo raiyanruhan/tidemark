@@ -130,6 +130,7 @@
                 <div class="analysis-progress-bar" id="progress-bar"></div>
               </div>
               <pre id="log-lines" class="analysis-log"></pre>
+              <button type="button" id="stop-btn" class="p-button--negative is-small" style="margin-top:0.5rem;display:none;">Stop</button>
             </div>
           </div>
         </div>
@@ -549,6 +550,51 @@
     document.getElementById('analyze').scrollIntoView({ behavior: 'smooth' });
   });
 
+  var currentSrc   = null;
+  var currentJobId = null;
+
+  function resetForm(errMsg) {
+    var btn   = document.getElementById('submit-btn');
+    var barEl = document.getElementById('progress-bar');
+    btn.disabled    = false;
+    btn.textContent = 'Run analysis';
+    document.getElementById('loading-msg').style.display = 'none';
+    document.getElementById('stop-btn').style.display = 'none';
+    if (errMsg) {
+      var n = document.getElementById('stream-error');
+      if (!n) {
+        n = document.createElement('div');
+        n.id = 'stream-error';
+        n.className = 'p-notification--negative';
+        n.innerHTML = '<div class="p-notification__content" role="alert">'
+          + '<h5 class="p-notification__title">Error</h5>'
+          + '<p class="p-notification__message" id="stream-error-msg"></p>'
+          + '</div>';
+        document.getElementById('analyze-form').before(n);
+      }
+      document.getElementById('stream-error-msg').textContent = errMsg;
+      document.getElementById('stream-error').style.display = '';
+    } else {
+      var n = document.getElementById('stream-error');
+      if (n) n.style.display = 'none';
+    }
+  }
+
+  function cancelJob() {
+    if (currentSrc) { currentSrc.close(); currentSrc = null; }
+    if (currentJobId) {
+      navigator.sendBeacon('/analyze/cancel/' + currentJobId);
+      currentJobId = null;
+    }
+  }
+
+  window.addEventListener('beforeunload', cancelJob);
+
+  document.getElementById('stop-btn').addEventListener('click', function () {
+    cancelJob();
+    resetForm(null);
+  });
+
   document.getElementById('analyze-form').addEventListener('submit', function (e) {
     e.preventDefault();
 
@@ -562,6 +608,7 @@
     logEl.textContent = '';
     barEl.style.width = '0%';
     document.getElementById('loading-msg').style.display = 'flex';
+    document.getElementById('stop-btn').style.display = '';
 
     var TOTAL_STEPS = 8;
     var stepsDone   = 0;
@@ -574,39 +621,25 @@
       logEl.scrollTop = logEl.scrollHeight;
     }
 
-    function resetForm(errMsg) {
-      btn.disabled    = false;
-      btn.textContent = 'Run analysis';
-      document.getElementById('loading-msg').style.display = 'none';
-      if (errMsg) {
-        var n = document.getElementById('stream-error');
-        if (!n) {
-          n = document.createElement('div');
-          n.id = 'stream-error';
-          n.className = 'p-notification--negative';
-          n.innerHTML = '<div class="p-notification__content" role="alert">'
-            + '<h5 class="p-notification__title">Error</h5>'
-            + '<p class="p-notification__message" id="stream-error-msg"></p>'
-            + '</div>';
-          document.getElementById('analyze-form').before(n);
-        }
-        document.getElementById('stream-error-msg').textContent = errMsg;
-        document.getElementById('stream-error').style.display = '';
-      }
-    }
-
     var src = new EventSource('/analyze/stream?' + params.toString());
+    currentSrc = src;
 
     src.onmessage = function (e) {
       var d = JSON.parse(e.data);
-      if (d.type === 'progress') {
+      if (d.type === 'job_id') {
+        currentJobId = d.job_id;
+      } else if (d.type === 'progress') {
         appendLog(d.msg);
       } else if (d.type === 'done') {
+        currentSrc   = null;
+        currentJobId = null;
         src.close();
         barEl.style.width = '100%';
         appendLog('redirecting to results...');
         setTimeout(function () { window.location.href = '/result/' + d.token; }, 300);
       } else if (d.type === 'error') {
+        currentSrc   = null;
+        currentJobId = null;
         src.close();
         resetForm(d.msg);
       }
@@ -614,6 +647,8 @@
 
     src.onerror = function () {
       if (src.readyState !== EventSource.CLOSED) {
+        currentSrc   = null;
+        currentJobId = null;
         src.close();
         resetForm('Connection lost. Try again.');
       }

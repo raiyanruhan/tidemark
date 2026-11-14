@@ -49,6 +49,14 @@ app = Flask(__name__)
 _result_store = {}
 _RESULT_TTL    = 600  # seconds
 
+# In-flight job store: job_id -> threading.Event (cancel flag).
+# Entry is removed when the worker thread finishes or the SSE stream closes.
+_job_store = {}
+
+
+class _Cancelled(Exception):
+    pass
+
 #, location registry --------------------------------------------------
 # Same cities as src/locations.rs. lat, lon, display name.
 LOCATIONS = {
@@ -270,7 +278,7 @@ def _resolve_variable(form):
     raise ValueError(f"Unknown variable '{alias}'.")
 
 
-def _run_full(lat, lon, code, start, end, progress=None):
+def _run_full(lat, lon, code, start, end, progress=None, cancel=None):
     """Fetch real data and run full analysis pipeline. No caching."""
     # Clamp to actual data availability — no source has data outside 1981-2025.
     # Prevents absurd ranges from hammering NASA APIs with guaranteed-empty requests.
@@ -282,6 +290,10 @@ def _run_full(lat, lon, code, start, end, progress=None):
     def emit(msg):
         if progress:
             progress(msg)
+
+    def check_cancel():
+        if cancel is not None and cancel.is_set():
+            raise _Cancelled()
 
     emit(f"fetching data for {lat:.2f}, {lon:.2f}...")
     if code in COMPOUND_PARAMS:
@@ -297,6 +309,8 @@ def _run_full(lat, lon, code, start, end, progress=None):
         monthly_by_year = fetch_monthly(lat, lon, code, start, end, progress)
         annual          = monthly_to_annual(monthly_by_year)
 
+    check_cancel()
+
     if len(annual) < 10:
         raise ValueError(f"Only {len(annual)} complete years of data (need 10+).")
 
@@ -305,7 +319,10 @@ def _run_full(lat, lon, code, start, end, progress=None):
     last_year = years[-1]
 
     emit(f"{len(vals)} years of data received ({years[0]}-{last_year})")
-    result = analyse(vals, years, code, last_year, monthly_by_year, progress=progress)
+    result = analyse(vals, years, code, last_year, monthly_by_year, progress=progress, cancel=cancel)
+
+    check_cancel()
+
     result.update({
         "lat": lat, "lon": lon, "param": code,
         "start_year": years[0], "end_year": last_year,
@@ -315,12 +332,14 @@ def _run_full(lat, lon, code, start, end, progress=None):
     })
 
     emit("fetching ENSO index from NOAA...")
+    check_cancel()
     enso_annual, enso_source = fetch_enso(years)
     if enso_annual:
         corrected_vals, attribution = enso_correct(vals, years, enso_annual)
         if corrected_vals is not None:
+            check_cancel()
             emit("running ENSO-corrected analysis...")
-            corr = analyse(corrected_vals, years, code, last_year, progress=progress)
+            corr = analyse(corrected_vals, years, code, last_year, progress=progress, cancel=cancel)
             masking = round(corr["slope"] - result["slope"], 6)
             result["enso_correction"] = {
                 "available":     True,
@@ -361,6 +380,10 @@ def analyze_stream():
     start = int(form.get("start", epoch))
     end   = int(form.get("end",   2025))
 
+    job_id = uuid.uuid4().hex
+    cancel = threading.Event()
+    _job_store[job_id] = cancel
+
     messages   = []
     done_flag  = [False]
     result_ref = [None]
@@ -371,38 +394,58 @@ def analyze_stream():
 
     def worker():
         try:
-            result_ref[0] = _run_full(lat, lon, code, start, end, progress=on_progress)
+            result_ref[0] = _run_full(lat, lon, code, start, end,
+                                       progress=on_progress, cancel=cancel)
+        except _Cancelled:
+            pass  # silent — no error message shown
         except Exception as exc:
             error_ref[0] = str(exc)
         finally:
             done_flag[0] = True
+            _job_store.pop(job_id, None)
 
     threading.Thread(target=worker, daemon=True).start()
 
     def generate():
-        sent = 0
-        while not done_flag[0] or sent < len(messages):
-            while sent < len(messages):
-                yield f"data: {json.dumps({'type': 'progress', 'msg': messages[sent]})}\n\n"
-                sent += 1
-            if not done_flag[0]:
-                time.sleep(0.05)
+        try:
+            yield f"data: {json.dumps({'type': 'job_id', 'job_id': job_id})}\n\n"
+            sent = 0
+            while not done_flag[0] or sent < len(messages):
+                while sent < len(messages):
+                    yield f"data: {json.dumps({'type': 'progress', 'msg': messages[sent]})}\n\n"
+                    sent += 1
+                if not done_flag[0]:
+                    time.sleep(0.05)
 
-        if error_ref[0]:
-            yield f"data: {json.dumps({'type': 'error', 'msg': error_ref[0]})}\n\n"
-        else:
-            token = uuid.uuid4().hex[:16]
-            _result_store[token] = (time.time(), dict(
-                result=result_ref[0], display=display,
-                label=label, unit=unit, code=code,
-                start=start, end=end, lat=lat, lon=lon,
-            ))
-            yield f"data: {json.dumps({'type': 'done', 'token': token})}\n\n"
+            if error_ref[0]:
+                yield f"data: {json.dumps({'type': 'error', 'msg': error_ref[0]})}\n\n"
+            elif result_ref[0] is not None:
+                token = uuid.uuid4().hex[:16]
+                _result_store[token] = (time.time(), dict(
+                    result=result_ref[0], display=display,
+                    label=label, unit=unit, code=code,
+                    start=start, end=end, lat=lat, lon=lon,
+                ))
+                yield f"data: {json.dumps({'type': 'done', 'token': token})}\n\n"
+            # cancelled: stream closes silently, browser resetForm via onerror
+        finally:
+            # Client disconnect or stop button: ensure worker exits cleanly.
+            cancel.set()
+            _job_store.pop(job_id, None)
 
     resp = Response(stream_with_context(generate()), mimetype="text/event-stream")
     resp.headers["Cache-Control"]    = "no-cache"
     resp.headers["X-Accel-Buffering"] = "no"
     return resp
+
+
+@app.route("/analyze/cancel/<job_id>", methods=["POST"])
+def analyze_cancel(job_id):
+    """Cancel an in-flight analysis. Called by stop button or beforeunload beacon."""
+    cancel = _job_store.get(job_id)
+    if cancel:
+        cancel.set()
+    return "", 204
 
 
 @app.route("/result/<token>")

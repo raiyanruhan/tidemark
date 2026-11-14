@@ -65,7 +65,7 @@ def parse_args():
     return p.parse_args()
 
 
-def analyse(vals, years, param, last_year, monthly_by_year=None, progress=None):
+def analyse(vals, years, param, last_year, monthly_by_year=None, progress=None, cancel=None):
     """
     Run the full Mann-Kendall pipeline on vals.
     Returns a result dict. monthly_by_year is optional (needed for seasonal).
@@ -131,7 +131,7 @@ def analyse(vals, years, param, last_year, monthly_by_year=None, progress=None):
         emit("running Monte Carlo simulation (1000 paths)...")
         result["trajectory"] = compute_trajectory(
             vals, slope, intercept, residuals, z_score,
-            sigma_n, phi, n, last_year, eff, progress=progress,
+            sigma_n, phi, n, last_year, eff, progress=progress, cancel=cancel,
         )
 
     emit("computing p-value trajectory...")
