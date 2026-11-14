@@ -188,6 +188,33 @@ td.num {
   flex-shrink: 0;
 }
 
+/* Whitepaper pill button: outlined with icon */
+.bar-whitepaper {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.9rem;
+  border-radius: 999px;
+  border: 1.5px solid rgba(255, 255, 255, 0.35);
+  color: rgba(255, 255, 255, 0.85) !important;
+  font-weight: 500;
+  font-size: 0.875rem;
+  text-decoration: none;
+  transition: none;
+  white-space: nowrap;
+}
+
+.bar-whitepaper:hover,
+.bar-whitepaper:focus-visible {
+  background-color: rgba(255, 255, 255, 0.35);
+  border-color: transparent;
+  color: #fff !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bar-whitepaper { transition: none; }
+}
+
 /* CTA button in bar: 8px rounded, rounds to pill on press */
 .bar-cta {
   margin: 0;
