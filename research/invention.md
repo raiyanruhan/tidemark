@@ -143,9 +143,9 @@ test        Modified Mann-Kendall (Hamed-Rao, lag=3)
 
 trend       -0.0003 mm/day / year
 direction   downward
-tau         -0.11
-z-score     -1.59
-p-value     0.112   - not yet significant (p > 0.05)
+tau         -0.09
+z-score     -0.84
+p-value     0.401   - not yet significant (p > 0.05)
 detection floor         +-0.001 mm/day / year   (slope is 0.3x floor, weak signal)
 
 significance trajectory:

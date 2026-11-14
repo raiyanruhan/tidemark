@@ -64,14 +64,14 @@ significant = E_n >= 20    # alpha = 0.05, evidence threshold (formal sequential
 
 For equispaced t = 1,...,n: sum of t^2 = n(n+1)(2n+1)/6, which is ~ n^3/3 for large n.
 
-Under H1 (true slope beta):
+Under H0/H1 (equispaced t = 1,...,n):
 ```
-E[Lambda_n] = beta * I(f) * n^3/3
-Var[Lambda_n] = I(f) * n^3/3
+Var[Lambda_n | H0] = I(f) * sum(t^2) = I(f) * n(n+1)(2n+1)/6 ~ I(f) * n^3/3
+E[Lambda_n | H1, beta] ~ beta * I(f) * sum(t) = beta * I(f) * n(n+1)/2 ~ beta * I(f) * n^2/2
 ```
 
-So omega_hat * Lambda_n has mean omega_hat*beta*I(f)*n^3/3 and variance omega_hat^2*I(f)*n^3/3.
-The log-normalizing constant for the normal MGF to make E[E_n | H0] = 1 is omega_hat^2*I(f)*n^3/6.
+Under H0, Lambda_n ~ N(0, I(f)*n^3/3).
+The log-normalizing constant (MGF at theta=omega_hat) to make E[E_n | H0] = 1 is omega_hat^2*I(f)*n^3/6.
 
 Under H0 (beta=0): E[E_n] = exp(0 + omega_hat^2*I_hat*n^3/6 - omega_hat^2*I_hat*n^3/6) = 1. ✓
 Under H1 (beta ~ omega_hat): E_n grows as exp(beta^2 * I(f) * n^3/6). Grows with n^3.

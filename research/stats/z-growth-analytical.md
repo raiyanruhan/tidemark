@@ -66,8 +66,8 @@ crossing_year = last_data_year + years_needed
 | 1.5 | 45 | 9 | 2034 |
 | 1.2 | 45 | 17 | 2042 |
 | 1.0 | 45 | 26 | 2051 |
-| 0.8 | 45 | 43 | 2068 |
-| 0.5 | 45 | 91 | 2116 |
+| 0.8 | 45 | 37 | 2062 |
+| 0.5 | 45 | 67 | 2092 |
 
 At z₀ < 0.8, the trend is so weak that it would take longer than a human lifetime to confirm.
 

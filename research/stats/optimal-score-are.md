@@ -63,8 +63,10 @@ e_opt = I(f)
 
 ARE(MK vs optimal rank test), the correct formula:
 ```
-ARE(MK vs optimal) = e_MK / e_opt = 12*sigma^2 * [integral of f^2]^2 / I(f)
+ARE(MK vs optimal) = e_MK / e_opt = 12 * [integral of f^2]^2 / I(f)
 ```
+Note: no sigma^2 here. ARE(MK vs OLS) = sigma^2 * e_MK. ARE(optimal vs OLS) = sigma^2 * I(f).
+So ARE(MK vs optimal) = ARE(MK vs OLS) / ARE(optimal vs OLS) = 12*sigma^2*(∫f²)² / (sigma^2*I(f)) = 12*(∫f²)²/I(f).
 
 Under normality: I(f_normal) = 1/sigma^2, so ARE(MK vs opt) = 3/pi ~ 0.955.
 MK needs ~5% more data than optimal even at Gaussian noise.
