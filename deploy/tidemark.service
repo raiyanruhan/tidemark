@@ -10,6 +10,8 @@ Environment="PATH=/var/www/tidemark/venv/bin"
 EnvironmentFile=/var/www/tidemark/shared/.env
 ExecStart=/var/www/tidemark/venv/bin/gunicorn \
     --workers 1 \
+    --worker-class gthread \
+    --threads 4 \
     --timeout 900 \
     --bind 127.0.0.1:5050 \
     --access-logfile /var/log/tidemark/access.log \
