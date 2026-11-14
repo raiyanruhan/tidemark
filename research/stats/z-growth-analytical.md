@@ -20,11 +20,15 @@ For small signal-to-noise (β·Δt/σ << 1), linearize Φ:
 2Φ(δ) - 1 ≈ δ · √(2/π)
 ```
 
-Sum over all pairs:
+Sum over all pairs (carrying the 1/√2 from δ through):
 ```
-E[S] = (β/σ) · √(2/π) · Σ_{i<j} (j-i)
-     = (β/σ) · √(2/π) · n(n-1)(n+1)/6
-     ≈ (β/σ) · √(2/π) · n³/6    [large n]
+E[sign(x_j - x_i)] = δ · √(2/π)   where δ = β(j-i)/(σ√2)
+                   = β(j-i)/(σ√2) · √(2/π)
+                   = β(j-i)/σ · √(1/π)      [1/√2 · √(2/π) = √(1/π)]
+
+E[S] = (β/σ) · √(1/π) · Σ_{i<j} (j-i)
+     = (β/σ) · √(1/π) · n(n-1)(n+1)/6
+     ≈ (β/σ) · √(1/π) · n³/6    [large n]
 ```
 
 The variance:
@@ -36,15 +40,20 @@ Var(S) = n(n-1)(2n+5)/18 ≈ n³/9    [large n]
 Expected Z-score:
 ```
 E[Z] ≈ E[S] / √Var(S)
-     = [(β/σ) · √(2/π) · n³/6] / [n^(3/2)/3]
-     = (β/σ) · n^(3/2) · √(1/(2π))
-     = (β/σ) · n^(3/2) · 0.399
+     = [(β/σ) · √(1/π) · n³/6] / [n^(3/2)/3]
+     = (β/σ) · n^(3/2) · √(1/π) / 2
+     = (β/σ) · n^(3/2) · 1/(2√π)
+     = (β/σ) · n^(3/2) · 0.282
 ```
+
+Note: 1/(2√π) = 0.2821. This is the same C used in the detection floor formula.
+An earlier version wrote C = √(1/(2π)) = 0.399, which omitted the 1/√2 factor from δ.
+The crossing-year formula and β_min = 9.93·σ/n^1.5 are unaffected (C cancels in ratios).
 
 **E[Z] grows as n^(3/2), not n^(1/2).**
 
-This is the same growth rate as OLS regression (the t-statistic for a slope also grows as n^(3/2) because
-leverage increases as n³). The asymptotic relative efficiency of MK vs OLS for Gaussian data is 3/π ≈ 0.955.
+Same growth rate as OLS regression (t-statistic for slope grows as n^(3/2) because leverage increases as n³).
+ARE(MK vs OLS) for Gaussian data = 3/π ≈ 0.955; MK needs ~5% more data than OLS for same power.
 
 ---
 
