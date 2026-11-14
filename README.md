@@ -1,120 +1,145 @@
-<p align="center"><img src="assets/logo.png" alt="tidemark" width="420"></p>
+<h1 align="center">
+  <a href="https://github.com/raiyanruhan/tidemark"><img src="assets/logo.png" width="300px" alt="tidemark"></a>
+</h1>
 
-This tool can pull NASA Earth science data for any location and run statistical trend analysis.
-It tells you not just whether a variable is trending, but when it becomes significant
-and what it crosses after that.
+<h3 align="center">pulls NASA Earth science data for any location and runs statistical trend analysis.</h3>
+
+---
+
+<p align="center">
+  <a href="https://www.spaceappschallenge.org/2026/challenges/">
+    <img src="https://img.shields.io/badge/NASA-Space%20Apps%202026-0B3D91?style=flat-square" alt="NASA Space Apps 2026">
+  </a>
+  <a href="https://power.larc.nasa.gov">
+    <img src="https://img.shields.io/badge/Data-NASA%20POWER-blue?style=flat-square" alt="NASA POWER">
+  </a>
+  <a href="https://disc.gsfc.nasa.gov">
+    <img src="https://img.shields.io/badge/Data-GPM%20IMERG-blue?style=flat-square" alt="GPM IMERG">
+  </a>
+</p>
+
+<p align="center">
+  <a href="whitepaper.pdf">
+    <img src="https://img.shields.io/badge/Read-Whitepaper-1a56db?style=flat-square" alt="Whitepaper">
+  </a>
+  <a href="https://www.python.org/">
+    <img src="https://img.shields.io/badge/Python-3.10%2B-3776AB?style=flat-square" alt="Python 3.10+">
+  </a>
+  <a href="https://www.rust-lang.org/">
+    <img src="https://img.shields.io/badge/Rust-1.70%2B-CE422B?style=flat-square" alt="Rust 1.70+">
+  </a>
+</p>
+
+---
+
+## Table of Contents
+
+* [Introduction](#introduction)
+* [Build](#build)
+* [Usage](#usage)
+* [Variables](#variables)
+* [Data Sources](#data-sources)
+* [Team](#team)
+
+## Introduction
+
+> [!NOTE]
+> Tidemark was built for NASA Space Apps Challenge 2026 - "Be An Earth System Trend Detective".
+> It is not an open source library. The repository contains the full implementation and whitepaper.
+
+Every existing climate trend tool reports the same thing: significant or not. That binary omits three things - how much more data is needed before a not-yet-significant trend becomes detectable, whether the current record is long enough to resolve the signal at all, and when a significant trend will cross real-world thresholds.
+
+Tidemark answers all three. It runs the Modified Mann-Kendall test with Hamed-Rao autocorrelation correction, computes the detection floor unconditionally, and for any non-significant trend runs three independent crossing-year estimates with divergence detection.
 
 ```
-$ tidemark analyze --location dhaka --var temperature
+$ tidemark analyze --location cairo --var rainfall
 
-location    Dhaka, Bangladesh  (23.81N, 90.41E)
-variable    temperature (T2M, C)
+location    Cairo, Egypt  (30.06N, 31.25E)
+variable    precipitation (PRECTOTCORR, mm/day)
 period      1981 - 2025  (45 years)
-test        Modified Mann-Kendall (Hamed-Rao, lag=3)
 
-trend       -0.0211 C / year
-direction   downward
-tau         -0.36
-z-score     -1.98
-p-value     0.047   ✓ significant (p < 0.05)
-detection floor         +-0.013 C / year   (slope is 1.6x above floor)
-method eff  ARE 0.73 vs optimal   (1.11x more data needed than optimal rank test)
-changepoint 1999   (Pettitt p=0.000)
-records     6 observed  4.4 expected  1.37x
+trend       +0.0009 mm/day / year
+p-value     0.74   not yet significant
+detection floor     +-0.0037 mm/day / year   (slope is 0.25x floor)
 
-seasonal trends:
-  DJF  -0.04017 C / year   p=0.000   significant
-  MAM  -0.02359 C / year   p=0.012   significant
-  JJA  -0.01241 C / year   p=0.007   significant
-  SON  -0.01107 C / year   p=0.236   --
-```
-
-when a trend is not yet significant, it projects when it will be:
-
-```
 significance trajectory:
-  analytical MK     2128   (assumes Gaussian IID, invalid here)
-  Weatherhead 1998  2123   (assumes Gaussian, also invalid)
-  Monte Carlo       2051   (n=1000, empirical bootstrap, correct)
-  CRB lower bound   2063   (Fisher information floor, any test)
+  analytical MK     2128   (Gaussian IID - invalid here)
+  Weatherhead 1998  2123   (Gaussian - invalid here)
+  Monte Carlo       2051   (n=1000, empirical bootstrap)
   methods diverge: 77 years
-  reason: residual skewness=1.95, normality p<0.001, non-Gaussian noise
+  reason: residual skewness=1.95, normality p<0.001
   trust: Monte Carlo
   85% PI            2036 - 2068
 ```
 
----
+The 77-year divergence between methods is a diagnostic. Cairo residuals are right-skewed. The standard formulas assume bell-curve noise and return a confident wrong answer. Tidemark detects this automatically and routes to the correct estimate.
 
-## build
+### Earth System Scan
+
+The `scan` subcommand runs all variables for a location in one command and produces a system fingerprint.
+
+```
+$ tidemark scan --location dhaka
+
+variable          direction   slope           p-value    significance
+temperature       downward    -0.021 C/yr     0.047      significant
+evaporation       rising      +0.008 mm/d/yr  0.041      significant
+humidity          falling     -0.11 %/yr      0.112      ~2031 (MC: 2029-2034)
+wind              falling     -0.002 m/s/yr   0.33       ~2039
+precipitation     downward    -0.016 mm/d/yr  0.385      ~2037 (GPM 2001-2025, 0.23x floor)
+```
+
+## Build
 
 ```
 cargo build --release
 pip install pymannkendall numpy scipy requests pandas
 ```
 
-requires Python 3.10+. Rust 1.70+.
+Requires Python 3.10+ and Rust 1.70+. Temperature, humidity, wind, and soil variables use the open NASA POWER API with no credentials. Precipitation (GPM IMERG) and remote sensing variables (AppEEARS MODIS) require a free NASA Earthdata account.
 
----
-
-## usage
+## Usage
 
 ```
 tidemark analyze --location <name> --var <variable>
 tidemark analyze --lat <lat> --lon <lon> --var <variable>
 tidemark analyze --location <name> --var <variable> --years <n>
+tidemark scan --location <name>
 tidemark compare --location <name> --location <name> --var <variable>
 ```
 
-`--years N` uses only the last N years of data (default: full record from 1981).
+`--years N` restricts to the last N years. Default is the full record from 1981. Named locations include dhaka, chittagong, cairo, nairobi, lagos, mumbai, delhi, karachi, jakarta, manila, bangkok, dakar, lima, london, tokyo. Use `--lat`/`--lon` for anything else.
 
-named locations: dhaka, chittagong, sylhet, cairo, nairobi, lagos, mumbai,
-delhi, karachi, jakarta, manila, bangkok, dakar, lima, london, tokyo, and others.
-unknown location: use `--lat`/`--lon` directly.
+## Variables
 
-variables:
+| Alias | Parameter | Unit | Source | From |
+|---|---|---|---|---|
+| `temperature` | T2M | C | NASA POWER | 1981 |
+| `max-temperature` | T2M_MAX | C | NASA POWER | 1981 |
+| `min-temperature` | T2M_MIN | C | NASA POWER | 1981 |
+| `humidity` | RH2M | % | NASA POWER | 1981 |
+| `evaporation` | EVLAND | mm/day | NASA POWER | 1981 |
+| `wind` | WS10M | m/s | NASA POWER | 1981 |
+| `vpd` | derived | kPa | NASA POWER | 1981 |
+| `dtr` | derived | C | NASA POWER | 1981 |
+| `soil` | GWETROOT | fraction | NASA POWER | 1981 |
+| `rainfall` | PRECTOTCORR | mm/day | GPM IMERG | 2001 |
+| `ndvi` | MOD13Q1 | ratio | ORNL DAAC MODIS | 2000 |
+| `lst` | MOD11A2.061 | C | AppEEARS MODIS | 2001 |
+| `et` | MOD16A2.061 | mm/day | AppEEARS MODIS | 2001 |
 
-```
-rainfall        PRECTOTCORR   mm/day
-temperature     T2M           C
-max-temperature T2M_MAX       C
-min-temperature T2M_MIN       C
-humidity        RH2M          %
-evaporation     EVLAND        mm/day
-wind            WS10M         m/s
-vpd             derived       kPa           (vapor pressure deficit: T2M + RH2M)
-dtr             derived       C             (diurnal temperature range: T2M_MAX - T2M_MIN)
-soil            GWETROOT      fraction      (root zone soil moisture)
-surface-soil    GWETTOP       fraction      (surface soil moisture)
-profile-soil    GWETPROF      fraction      (full profile soil moisture)
-frost           FROST_DAYS    days          (monthly frost days)
-soil-temp       TSOIL1        C             (soil temperature layer 1)
-skin-temp       TS            C             (earth skin temperature)
-ndvi            MOD13Q1       ratio         (MODIS Terra 250m NDVI, 2000-present)
-lst             MOD11A2.061   C             (MODIS land surface temperature, 2001-present, Earthdata auth)
-et              MOD16A2.061   mm/day        (MODIS evapotranspiration, 2001-present, Earthdata auth)
-```
+## Data Sources
 
----
+**[NASA POWER](https://power.larc.nasa.gov)** - MERRA-2 reanalysis, 0.5 x 0.5 deg. Free REST API, no authentication. 1981-present.
 
-## data
+**[NASA GES DISC GPM IMERG](https://disc.gsfc.nasa.gov)** - GPM IMERG Final Run V07B monthly precipitation. NASA Earthdata auth required. 2001-present. First fetch ~170s; cached after.
 
-NASA POWER API — https://power.larc.nasa.gov  
-no API key. MERRA-2 reanalysis. 1981-present.  
-variables: T2M, T2M_MAX, T2M_MIN, RH2M, EVLAND, WS10M, soil/derived.
+**[NASA AppEEARS](https://appeears.earthdatacloud.nasa.gov)** - MODIS LST (MOD11A2.061) and ET (MOD16A2.061). NASA Earthdata auth required. Authorize "AppEEARS" at urs.earthdata.nasa.gov before first use. First task 2-10 min; subsequent runs instant from cache.
 
-NASA GES DISC GPM IMERG — https://disc.gsfc.nasa.gov  
-Earthdata auth required. GPM IMERG V07B monthly precipitation. 2001-present.  
-set NASA_EARTHDATA_USERNAME and NASA_EARTHDATA_PASSWORD. first fetch ~170s, cached after.
+**[ORNL DAAC MODIS](https://modis.ornl.gov/rst/api/v1/)** - MOD13Q1 250m NDVI. No authentication. 2000-present. Cached to `~/.tidemark/cache/`.
 
-NASA AppEEARS — https://appeears.earthdatacloud.nasa.gov  
-Earthdata auth required. MODIS LST (MOD11A2.061) and ET (MOD16A2.061). 2001-present.  
-authorize "AppEEARS" at urs.earthdata.nasa.gov before first use.  
-first task 2-10 min depending on server queue; subsequent runs instant from cache.
+## Team
 
-ORNL DAAC MODIS Web Service — https://modis.ornl.gov/rst/api/v1/  
-no API key. MOD13Q1 (MODIS Terra 250m 16-day NDVI). 2000-present.  
-first fetch cached to ~/.tidemark/cache/; subsequent runs instant.
+Raiyan Bin Rashid, Jotirmoy Bhowmik, Zunaeid Siddique, Nahin Rahman
 
----
-
-built for NASA Space Apps Challenge 2026 — "Be An Earth System Trend Detective"
+NASA Space Apps Challenge 2026.
