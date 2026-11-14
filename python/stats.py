@@ -50,13 +50,13 @@ def compute_efficiency_metrics(residuals):
     x = np.linspace(float(residuals.min()) - 2.0 * s,
                     float(residuals.max()) + 2.0 * s, 500)
     f        = np.maximum(kde(x), 1e-12)
-    int_f_sq = float(np.trapz(f ** 2, x))
+    int_f_sq = float(np.trapezoid(f ** 2, x) if hasattr(np, 'trapezoid') else np.trapz(f ** 2, x))
 
     h     = max(1e-5, s * 1e-3)
     score = -(kde(x + h) - kde(x - h)) / (2.0 * h * f)
     score = np.clip(score, float(np.percentile(score, 2)), float(np.percentile(score, 98)))
 
-    I_fisher = float(np.trapz(score ** 2 * f, x))
+    I_fisher = float(np.trapezoid(score ** 2 * f, x) if hasattr(np, 'trapezoid') else np.trapz(score ** 2 * f, x))
     I_fisher = max(I_fisher, 1.0 / sigma2)
 
     are_mk_ols = 12.0 * sigma2 * int_f_sq ** 2
