@@ -1,4 +1,13 @@
+mod cli;
+mod locations;
+mod output;
+
+use std::process;
+
 fn main() {
-    eprintln!("tidemark: not yet implemented");
-    std::process::exit(1);
+    if let Err(e) = cli::run() {
+        eprintln!("error: {e}");
+        process::exit(1);
+    }
+    process::exit(0);
 }
