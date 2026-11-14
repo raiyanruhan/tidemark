@@ -12,9 +12,11 @@ import numpy as np
 
 warnings.filterwarnings("ignore")
 
-from fetch  import fetch_monthly, monthly_to_annual, COMPOUND_PARAMS, compute_compound_series
-from stats  import (compute_residuals, detection_floor, lag1_acf,
-                    run_mannkendall, compute_efficiency_metrics)
+from fetch       import fetch_monthly, monthly_to_annual, COMPOUND_PARAMS, compute_compound_series
+from milestones  import compute_milestones
+from stats       import (compute_residuals, detection_floor, lag1_acf,
+                         run_mannkendall, compute_efficiency_metrics)
+from trajectory  import compute_pvalue_series, compute_trajectory
 
 
 def parse_args():
@@ -84,6 +86,21 @@ def main():
     last_year = years[-1]
 
     result = analyse(vals, years, args.var, last_year)
+
+    slope     = result["slope"]
+    intercept = result["intercept"]
+    residuals = np.array(vals) - (intercept + slope * np.arange(len(vals)))
+
+    if result["significant"]:
+        result["milestones"] = compute_milestones(vals, slope, last_year, args.var)
+    else:
+        result["trajectory"] = compute_trajectory(
+            vals, slope, intercept, residuals, result["z_score"],
+            result["sigma_n"], result["phi"], len(vals), last_year, result["efficiency"],
+        )
+
+    result["pvalue_series"] = compute_pvalue_series(vals, years, last_year)
+
     result.update({
         "lat":        args.lat,
         "lon":        args.lon,
