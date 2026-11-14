@@ -42,110 +42,173 @@ td.num {
   font-variant-numeric: tabular-nums;
 }
 
-/* Nav label: muted on dark nav */
-.nav-label {
-  color: rgba(255, 255, 255, 0.5);
-  font-size: 0.8rem;
-  cursor: default;
-  pointer-events: none;
+/* Design tokens */
+:root {
+  --gutter: clamp(1rem, 4vw, 4rem);
+  --bg: #262626;
+  --line: rgba(244, 241, 234, 0.2);
 }
 
-/* Nav right-side actions: pushed right via margin-left: auto */
-.nav-actions {
-  margin-left: auto;
+/* page chrome */
+
+.bar {
+  position: relative;
+  z-index: 50;
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 0.25rem;
+  padding: 0.6rem var(--gutter);
+  background: var(--bg);
+  color: #fff;
 }
 
-/* Analyze CTA button */
-.nav-cta {
-  display: inline-flex;
-  align-items: center;
-  background-color: #1a56db;
-  color: #fff !important;
-  border-radius: 0;
-  padding: 0.3rem 1.1rem;
-  font-size: 0.875rem;
+/* smart bar: solid once the page has moved, slides away on scroll down, back on scroll up (SiteBar.astro) */
+.bar--smart {
+  position: fixed;
+  transition:
+    transform 250ms ease,
+    background-color 250ms ease;
+}
+
+.bar--smart.is-stuck {
+  background: var(--bg);
+  box-shadow: 0 1px 0 var(--line);
+}
+
+.bar--smart.is-stuck,
+.bar--smart.is-stuck a {
+  color: #fff;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bar--smart {
+    transition: none;
+  }
+}
+
+.bar a {
+  color: rgba(255, 255, 255, 0.75);
+  text-decoration: none;
   font-weight: 500;
-  text-decoration: none;
-  transition: background-color 0.12s ease;
-  white-space: nowrap;
 }
 
-.nav-cta:hover,
-.nav-cta:focus {
-  background-color: #1142b8;
-  color: #fff !important;
-  text-decoration: none;
+.bar a:hover,
+.bar a:focus-visible {
+  color: #fff;
 }
 
-/* Whitepaper download link: muted, not a primary CTA */
-.nav-paper {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  background-color: rgba(255,255,255,0.08);
-  color: rgba(255,255,255,0.75) !important;
-  border-radius: 0;
-  padding: 0.3rem 1.0rem;
-  font-size: 0.875rem;
-  font-weight: 400;
-  text-decoration: none;
-  transition: background-color 0.12s ease, color 0.12s ease;
-  white-space: nowrap;
-}
-
-.nav-paper:hover,
-.nav-paper:focus {
-  background-color: rgba(255,255,255,0.14);
-  color: #fff !important;
-  text-decoration: none;
-}
-
-/* Plain nav text link */
-.nav-link-plain {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  color: rgba(255,255,255,0.75) !important;
-  border: 1px solid rgba(255,255,255,0.18);
-  border-radius: 0;
-  padding: 0.3rem 1.0rem;
-  font-size: 0.875rem;
-  font-weight: 400;
-  text-decoration: none;
-  transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease;
-  white-space: nowrap;
-}
-
-.nav-link-plain:hover,
-.nav-link-plain:focus {
-  border-color: rgba(255,255,255,0.55);
-  background-color: rgba(255,255,255,0.06);
-  color: #fff !important;
-  text-decoration: none;
-}
-
-/* GitHub icon button */
-.nav-github {
+.bar-nav {
   display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.25rem 1.5rem;
+}
+
+@media (max-width: 720px) {
+  .bar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .bar-nav {
+    justify-content: flex-start;
+    gap: 0.25rem 1rem;
+    font-size: 0.875rem;
+  }
+}
+
+/* bar hover: the links fill to a pill on hover and when current */
+.bar-nav > a:not(.bar-cta) {
+  padding: 0.4rem 1rem;
+  border-radius: 999px;
+  transition: background-color 200ms ease;
+}
+
+.bar-nav > a:not(.bar-cta):hover,
+.bar-nav > a:not(.bar-cta):focus-visible,
+.bar-nav > a[aria-current] {
+  background-color: rgba(255, 255, 255, 0.16);
+}
+
+.bar .mark {
+  transition: opacity 200ms ease;
+}
+
+.bar .mark:hover {
+  opacity: 0.75;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bar-nav > a,
+  .bar .mark {
+    transition: none;
+  }
+}
+
+/* icon buttons: circle fill on hover (globe button pattern from SiteBar.astro) */
+.bar-icon-btn {
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0 0.9rem;
-  height: 100%;
-  opacity: 0.6;
+  width: 2.5rem;
+  height: 2.5rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
   color: #fff;
   text-decoration: none;
-  transition: opacity 0.12s ease;
+  transition: background-color 200ms ease;
 }
 
-.nav-github:hover,
-.nav-github:focus {
-  opacity: 1;
-  color: #fff;
-  text-decoration: none;
+.bar-icon-btn:hover,
+.bar-icon-btn:focus-visible {
+  background-color: rgba(255, 255, 255, 0.16);
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .bar-icon-btn {
+    transition: none;
+  }
+}
+
+/* suppress tooltip dotted underline on icon buttons */
+.bar-icon-btn.tip {
+  border-bottom: none;
+  cursor: pointer;
+}
+
+.bar-icon-btn svg {
+  display: block;
+  width: 1.5rem;
+  height: 1.5rem;
+  flex-shrink: 0;
+}
+
+/* CTA button in bar: 8px rounded, rounds to pill on press */
+.bar-cta {
+  margin: 0;
+  border-radius: 0.5rem;
+  transition: border-radius 150ms ease;
+}
+
+.bar-cta:active {
+  border-radius: 999px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bar-cta {
+    transition: none;
+  }
+}
+
+.bar a.bar-cta {
+  color: #fff;
+}
+
 
 /* Custom combobox */
 .cb {
