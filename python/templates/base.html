@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}tidemark{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Ubuntu:ital,wght@0,300;0,400;0,500;0,700;1,300;1,400;1,500;1,700&family=Ubuntu+Mono:ital,wght@0,400;0,700;1,400;1,700&display=optional" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='vanilla.min.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="is-paper">
+
+  <header id="navigation" class="p-navigation is-dark">
+    <div class="p-navigation__row">
+      <div class="p-navigation__banner">
+        <div class="p-navigation__tagged-logo">
+          <a class="p-navigation__link" href="/">
+            <span class="p-navigation__logo-title nav-wordmark"><span class="wm-bracket">~</span><span class="wm-first">tide</span><span class="wm-second">mark</span><span class="wm-bracket">~</span></span>
+          </a>
+        </div>
+      </div>
+      <div class="nav-actions">
+        <a class="nav-link-plain" href="/how-it-works">How it works</a>
+        <a class="nav-cta" href="/#analyze">Analyze</a>
+        <a class="nav-paper" href="/whitepaper.pdf" target="_blank" rel="noopener">
+          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
+            <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+            <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
+          </svg>
+          Whitepaper
+        </a>
+        <a class="nav-github" href="https://github.com/raiyanruhan" target="_blank" rel="noopener" aria-label="GitHub">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true">
+            <path d="M12 0C5.374 0 0 5.373 0 12c0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0 1 12 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z"/>
+          </svg>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+
+  {# Footer: exact vanilla-framework _footer.html pattern #}
+  <footer class="p-strip is-dark">
+    <div class="row">
+      <div class="col-3">
+        <p class="u-no-margin--bottom">NASA Space Apps 2026</p>
+      </div>
+      <nav class="col-3" aria-label="Footer">
+        <ul class="p-list u-no-margin--bottom">
+          <li class="p-list__item">
+            <a class="is-dark" href="https://disc.gsfc.nasa.gov/" target="_blank">NASA GES DISC (GPM)</a>
+          </li>
+          <li class="p-list__item">
+            <a class="is-dark" href="https://appeears.earthdatacloud.nasa.gov/" target="_blank">NASA AppEEARS</a>
+          </li>
+          <li class="p-list__item">
+            <a class="is-dark" href="https://power.larc.nasa.gov/" target="_blank">NASA POWER API</a>
+          </li>
+          <li class="p-list__item">
+            <a class="is-dark" href="https://modis.ornl.gov/rst/api/v1/" target="_blank">ORNL DAAC MODIS</a>
+          </li>
+          <li class="p-list__item">
+            <a class="is-dark" href="https://psl.noaa.gov/enso/mei/" target="_blank">NOAA MEI v2</a>
+          </li>
+          <li class="p-list__item">
+            <a class="is-dark" href="https://www.spaceappschallenge.org/2026/challenges/" target="_blank">Space Apps Challenge</a>
+          </li>
+        </ul>
+      </nav>
+      <div class="col-6">
+        <p class="u-no-margin--bottom u-text--muted" style="color: rgba(255,255,255,0.5); font-size: 0.85rem;">
+          Earth system data: NASA POWER (1981+) / GPM IMERG (2001+) / AppEEARS MODIS (2001+) / ORNL DAAC NDVI (2000+) | ENSO: NOAA MEI v2 | Stats: Mann-Kendall / Monte Carlo
+        </p>
+      </div>
+    </div>
+  </footer>
+
+<script>
+(function () {
+  var box = document.createElement('div');
+  box.style.cssText = [
+    'position:fixed',
+    'z-index:9999',
+    'display:none',
+    'max-width:260px',
+    'padding:8px 12px',
+    'background:#262626',
+    'color:#e8e8e8',
+    'font-family:Ubuntu,Segoe UI,Verdana,sans-serif',
+    'font-size:0.8rem',
+    'line-height:1.55',
+    'border-radius:2px',
+    'pointer-events:none',
+    'white-space:normal',
+    'word-wrap:break-word',
+  ].join(';');
+  document.body.appendChild(box);
+
+  document.addEventListener('mouseover', function (e) {
+    var el = e.target.closest ? e.target.closest('.tip') : null;
+    if (!el) { box.style.display = 'none'; return; }
+    var tip = el.getAttribute('data-tip');
+    if (!tip) return;
+    box.textContent = tip;
+    box.style.display = 'block';
+    var r  = el.getBoundingClientRect();
+    var bw = box.offsetWidth;
+    var bh = box.offsetHeight;
+    var left = r.left + r.width / 2 - bw / 2;
+    var top  = r.top - bh - 8;
+    left = Math.max(8, Math.min(left, window.innerWidth - bw - 8));
+    if (top < 8) top = r.bottom + 8;
+    box.style.left = left + 'px';
+    box.style.top  = top  + 'px';
+  });
+
+  document.addEventListener('mouseout', function (e) {
+    var el = e.target.closest ? e.target.closest('.tip') : null;
+    if (el) box.style.display = 'none';
+  });
+}());
+</script>
+</body>
+</html>

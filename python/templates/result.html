@@ -1,0 +1,738 @@
+{% extends "base.html" %}
+{% block title %}{{ display }} | {{ label }} | tidemark{% endblock %}
+
+{% block content %}
+{% set r = result %}
+{% set sig = r.significant %}
+{% set ud = {'degC': 'deg C', 'mm/day': 'mm/day', '%': '%', 'm/s': 'm/s', 'kPa': 'kPa', 'fraction': 'fraction'} %}
+{% set ud_unit = ud.get(unit, unit) %}
+
+{# Hero: col-start-large-4 col-9, h1 + metadata + verdict + plain-English summary #}
+<section class="p-strip is-shallow u-no-padding--bottom">
+  <div class="row p-section">
+    <div class="col-start-large-4 col-9">
+      <h1>{{ display }}</h1>
+      <p class="u-text--muted u-no-margin--bottom">{{ label }} / {{ r.start_year }}-{{ r.end_year }} / {{ r.n_years }} years</p>
+      <p class="u-text--muted">{{ code }} / {{ ud_unit }} / Modified Mann-Kendall (Hamed-Rao, lag=3)</p>
+      <hr class="p-rule" />
+      <div class="{% if sig %}p-notification--positive{% else %}p-notification--caution{% endif %}">
+        <div class="p-notification__content">
+          <h5 class="p-notification__title">{% if sig %}Significant trend detected{% else %}Not yet significant{% endif %}</h5>
+          <p class="p-notification__message">
+            {{ r.direction }} at <strong>{{ '%+.5f' | format(r.slope) }} {{ ud_unit }} / year</strong>,
+            p = {{ '%.4f' | format(r.p_value) }}
+          </p>
+        </div>
+      </div>
+
+      {% if summary %}
+      <div class="result-summary">
+        {% for s in summary %}
+        <p>{{ s }}</p>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+{# Main: col-3 sticky sidenav + col-9 main content sections #}
+<section class="p-section">
+  <div class="row">
+
+    <aside class="col-3">
+      <div class="p-side-navigation--raw-html u-hide--small u-hide--medium"
+           id="drawer"
+           style="position: sticky; top: 4rem">
+        <nav class="p-side-navigation__drawer" aria-label="Result sections">
+          <ul>
+            <li class="p-side-navigation__item">
+              <a class="p-side-navigation__link" href="#time-series">Time series</a>
+            </li>
+            <li class="p-side-navigation__item">
+              <a class="p-side-navigation__link" href="#stats">Statistical detail</a>
+            </li>
+            {% if not sig and r.trajectory %}
+            <li class="p-side-navigation__item">
+              <a class="p-side-navigation__link" href="#trajectory">Significance trajectory</a>
+            </li>
+            {% endif %}
+            {% if not sig and r.trajectory and r.trajectory.fan_paths %}
+            <li class="p-side-navigation__item">
+              <a class="p-side-navigation__link" href="#fan-chart">Monte Carlo fan chart</a>
+            </li>
+            {% endif %}
+            {% if sig and r.milestones %}
+            <li class="p-side-navigation__item">
+              <a class="p-side-navigation__link" href="#milestones">Projected milestones</a>
+            </li>
+            {% endif %}
+            {% if r.pvalue_series %}
+            <li class="p-side-navigation__item">
+              <a class="p-side-navigation__link" href="#pvalue">P-value trajectory</a>
+            </li>
+            {% endif %}
+            {% if r.enso_correction and r.enso_correction.available %}
+            <li class="p-side-navigation__item">
+              <a class="p-side-navigation__link" href="#enso">ENSO correction</a>
+            </li>
+            {% endif %}
+            {% if r.seasonal %}
+            <li class="p-side-navigation__item">
+              <a class="p-side-navigation__link" href="#seasonal">Seasonal breakdown</a>
+            </li>
+            {% endif %}
+          </ul>
+          <hr class="p-rule--muted" />
+          <a href="/" class="p-button--base has-icon u-no-margin--bottom">
+            <i class="p-icon--chevron-left"></i><span>New analysis</span>
+          </a>
+        </nav>
+      </div>
+    </aside>
+
+    <main class="col-9 col-medium-6 col-small-4">
+
+      {# Time series #}
+      <div class="p-section" id="time-series">
+        <h2>Time series</h2>
+        <p class="u-text--muted section-sub">Annual averages from NASA satellite data at this location.</p>
+        <div style="position:relative; height:360px">
+          <canvas id="ts-chart"></canvas>
+        </div>
+      </div>
+
+      {# Statistical detail #}
+      <div class="p-section" id="stats">
+        <h2>Statistical detail</h2>
+        <p class="u-text--muted section-sub">The numbers behind the trend test. Hover over any underlined term for an explanation.</p>
+        <div class="p-card">
+          <h3 class="p-card__title">Trend</h3>
+          <div class="p-card__content">
+            <table>
+              <tr>
+                <td><span class="tip" data-tip="The rate of change per year. Calculated as the median of all pairwise slopes, so a few extreme years do not distort it.">Sen's slope</span></td>
+                <td class="num">{{ '%+.5f' | format(r.slope) }} {{ ud_unit }} / yr</td>
+              </tr>
+              <tr>
+                <td>Direction</td>
+                <td class="num">{{ r.direction }}</td>
+              </tr>
+              <tr>
+                <td><span class="tip" data-tip="How consistently the values move in one direction over time. Near 1.0 means every year is higher than the year before. Near zero means no clear pattern.">Kendall tau</span></td>
+                <td class="num">{{ '%.4f' | format(r.tau) }}</td>
+              </tr>
+              <tr>
+                <td><span class="tip" data-tip="How many standard deviations the trend is from zero. Values above 1.96 or below -1.96 cross the significance threshold.">Z-score</span></td>
+                <td class="num">{{ '%.4f' | format(r.z_score) }}</td>
+              </tr>
+              <tr>
+                <td><span class="tip" data-tip="The probability that this pattern could appear by chance in data with no real trend. Below 0.05 is the standard threshold for calling a trend statistically significant.">p-value</span></td>
+                <td class="num">{{ '%.6f' | format(r.p_value) }}</td>
+              </tr>
+            </table>
+          </div>
+        </div>
+
+        <div class="p-card">
+          <h3 class="p-card__title">Detectability</h3>
+          <div class="p-card__content">
+            <table>
+              <tr>
+                <td><span class="tip" data-tip="The smallest real trend this test can distinguish from noise with the current record length. A trend below this floor cannot be confirmed yet, even if it exists.">Detection floor</span></td>
+                <td class="num">+/- {{ '%.5f' | format(r.detection_floor) }} {{ ud_unit }} / yr</td>
+              </tr>
+              <tr>
+                <td><span class="tip" data-tip="How many times larger the detected slope is compared to the detection floor. Above 1.0 means the trend is reliably detectable. Below 1.0 means more years of data are needed.">Slope / floor ratio</span></td>
+                <td class="num">{{ '%.2f' | format(r.floor_ratio) }}x</td>
+              </tr>
+              <tr>
+                <td><span class="tip" data-tip="The typical year-to-year variation after removing the trend. High noise requires a longer record to confirm any trend.">Background noise</span></td>
+                <td class="num">{{ '%.4f' | format(r.sigma_n) }}</td>
+              </tr>
+              <tr>
+                <td><span class="tip" data-tip="How much one year's value predicts the next. Near zero means years are independent. Near 1.0 means values carry over strongly from year to year. The trend test corrects for this.">Year-to-year memory</span></td>
+                <td class="num">{{ '%.4f' | format(r.phi) }}</td>
+              </tr>
+              {% if r.efficiency %}
+              <tr>
+                <td><span class="tip" data-tip="How statistically efficient the Mann-Kendall test is compared to ordinary linear regression for this data. Near 1.0 means both methods are equally powerful.">Test efficiency</span></td>
+                <td class="num">{{ '%.3f' | format(r.efficiency.are_mk_ols) }}</td>
+              </tr>
+              {% endif %}
+            </table>
+          </div>
+        </div>
+
+        <div class="p-card">
+          <h3 class="p-card__title">Change point and records</h3>
+          <div class="p-card__content">
+            <table>
+              {% if r.changepoint.detected %}
+              <tr>
+                <td><span class="tip" data-tip="A test for a sudden shift or breakpoint in the data. It detects whether values before a certain year are systematically different from values after.">Pettitt test</span></td>
+                <td class="num">{{ r.changepoint.year }}</td>
+              </tr>
+              <tr><td>p-value</td><td class="num">{{ '%.4f' | format(r.changepoint.p) }}</td></tr>
+              {% else %}
+              <tr>
+                <td><span class="tip" data-tip="A test for a sudden shift or breakpoint in the data. It detects whether values before a certain year are systematically different from values after.">Pettitt test</span></td>
+                <td class="num">none detected</td>
+              </tr>
+              <tr><td>p-value</td><td class="num">{{ '%.4f' | format(r.changepoint.p) }}</td></tr>
+              {% endif %}
+              <tr>
+                <td><span class="tip" data-tip="How many all-time record highs or lows appeared in the data, depending on the trend direction.">Records observed</span></td>
+                <td class="num">{{ r.records.observed }}</td>
+              </tr>
+              <tr>
+                <td><span class="tip" data-tip="How many records would appear in a random series of the same length with no real trend. More records than expected suggests a systematic push in one direction.">Records expected</span></td>
+                <td class="num">{{ '%.1f' | format(r.records.expected) }}</td>
+              </tr>
+              <tr>
+                <td><span class="tip" data-tip="Observed records divided by expected records. Above 1.5 means the data is producing records far more often than chance alone would predict.">Record ratio</span></td>
+                <td class="num">{{ '%.2f' | format(r.records.ratio) }}x{% if r.records.ratio >= 1.5 %} (dice loaded){% endif %}</td>
+              </tr>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      {# Significance trajectory #}
+      {% if not sig and r.trajectory %}
+      {% set t = r.trajectory %}
+      <div class="p-section" id="trajectory">
+        <h2>Significance trajectory</h2>
+        <p class="u-text--muted section-sub">When will the evidence become conclusive? Four independent methods give estimates, each making different assumptions about the noise distribution.</p>
+        <table>
+          <thead>
+            <tr>
+              <th>Method</th>
+              <th>Crossing year</th>
+              <th>Notes</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="tip" data-tip="Uses the mathematical rate at which the trend test's Z-score grows as more data is added. Assumes the noise is normally distributed and years are independent.">Analytical MK</span></td>
+              <td class="num">{{ t.analytical_year or 'N/A' }}</td>
+              <td>n^(3/2) Z-score growth formula{% if not t.methods_agree %}, assumes Gaussian IID, invalid here{% endif %}</td>
+            </tr>
+            <tr>
+              <td><span class="tip" data-tip="A formula from Weatherhead et al. (1998), a classic climate detection paper. Accounts for year-to-year autocorrelation. Also assumes normally distributed noise.">Weatherhead (1998)</span></td>
+              <td class="num">{{ t.weatherhead_year or 'N/A' }}</td>
+              <td>OLS detection time, phi = {{ '%.2f' | format(t.weatherhead_phi) }}{% if not t.methods_agree %}, assumes Gaussian{% endif %}</td>
+            </tr>
+            <tr>
+              <td><span class="tip" data-tip="Runs 1,000 simulated futures by randomly drawing from the observed noise. The most reliable estimate when the year-to-year noise is non-Gaussian or skewed.">Monte Carlo</span></td>
+              <td class="num">{{ t.mc_median or 'N/A' }}</td>
+              <td>n=1000, empirical bootstrap{% if not t.methods_agree %} — <strong>trust this</strong>{% endif %}</td>
+            </tr>
+            <tr>
+              <td><span class="tip" data-tip="The theoretical earliest any statistical test could confirm this trend, given the data's noise level. Derived from the Cramer-Rao bound in information theory. No method can beat this floor.">CRB lower bound</span></td>
+              <td class="num">{{ t.crb_year or 'N/A' }}</td>
+              <td>Fisher information floor. No test can beat this.</td>
+            </tr>
+          </tbody>
+        </table>
+        {% if t.mc_pi_low is not none and t.mc_pi_high is not none %}
+        <p>85% prediction interval: <strong>{{ t.mc_pi_low }} to {{ t.mc_pi_high }}</strong></p>
+        {% endif %}
+        {% if not t.methods_agree %}
+        <div class="p-notification--caution">
+          <div class="p-notification__content">
+            <h5 class="p-notification__title">Methods diverge ({{ t.divergence_years }} years)</h5>
+            <p class="p-notification__message">Residual skewness = {{ '%.2f' | format(t.skewness) }}, non-Gaussian noise. Analytical and Weatherhead formulas assume normality and are invalid here. Trust the Monte Carlo estimate.</p>
+          </div>
+        </div>
+        {% else %}
+        <div class="p-notification--positive">
+          <div class="p-notification__content">
+            <h5 class="p-notification__title">Methods agree</h5>
+            <p class="p-notification__message">All four methods give consistent estimates. The noise distribution is approximately Gaussian.</p>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      {# Monte Carlo fan chart #}
+      {% if not sig and r.trajectory and r.trajectory.fan_paths %}
+      <div class="p-section" id="fan-chart">
+        <h2>Monte Carlo fan chart</h2>
+        <p class="u-text--muted section-sub">Uncertainty envelope from {{ r.trajectory.fan_paths | length }} simulated futures. Inner band: 40th-60th percentile. Middle: 25th-75th. Outer: 10th-90th. The blue median line is the central trajectory. The dashed vertical line marks the Monte Carlo crossing year; the shaded column is the 85% PI.</p>
+        <div style="position:relative; height:360px">
+          <canvas id="fan-chart-canvas"></canvas>
+        </div>
+      </div>
+      {% endif %}
+
+      {# Projected milestones #}
+      {% if sig and r.milestones %}
+      <div class="p-section" id="milestones">
+        <h2>Projected milestones</h2>
+        <p class="u-text--muted section-sub">Where the current rate leads over the coming decades, extrapolating Sen's slope forward. Assumes the trend continues at the same rate with no acceleration or deceleration.</p>
+        <table>
+          <thead><tr><th>Threshold</th><th>Year</th><th>Notes</th></tr></thead>
+          <tbody>
+            {% for m in r.milestones %}
+            <tr>
+              <td>{{ m.delta }} {{ m.unit }}</td>
+              <td class="num">~{{ m.year }}</td>
+              <td>{{ m.label or '' }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% endif %}
+
+      {# P-value trajectory #}
+      {% if r.pvalue_series %}
+      <div class="p-section" id="pvalue">
+        <h2>P-value trajectory</h2>
+        <p class="u-text--muted section-sub">How the statistical confidence in this trend has built up year by year, with an analytical projection forward. The red dashed line marks the 0.05 significance threshold.</p>
+        <div style="position:relative; height:300px">
+          <canvas id="pv-chart"></canvas>
+        </div>
+      </div>
+      {% endif %}
+
+      {# ENSO correction #}
+      {% if r.enso_correction and r.enso_correction.available %}
+      {% set ec = r.enso_correction %}
+      <div class="p-section" id="enso">
+        <h2>ENSO correction</h2>
+        <p class="u-text--muted section-sub">El Nino and La Nina cycles create large year-to-year swings in many climate variables. This separates their contribution from the underlying long-term trend.</p>
+        <p class="u-text--muted">
+          El Nino-Southern Oscillation explains
+          <strong>{{ '%.1f' | format(ec.enso_fraction * 100) }}%</strong>
+          of interannual variance at this location.
+          {% if ec.masking_rate and ec.masking_rate | abs > 0.0001 %}
+          After removing ENSO variability, the anthropogenic trend shifts by
+          <strong>{{ '%+.5f' | format(ec.masking_rate) }} {{ ud_unit }} / year</strong>.
+          {% endif %}
+        </p>
+        <table>
+          <thead>
+            <tr><th></th><th>Slope ({{ ud_unit }}/yr)</th><th>p-value</th><th>Significant</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Raw signal</td>
+              <td class="num">{{ '%+.5f' | format(r.slope) }}</td>
+              <td class="num">{{ '%.4f' | format(r.p_value) }}</td>
+              <td><i class="p-icon--{% if r.significant %}success{% else %}error{% endif %}"></i></td>
+            </tr>
+            <tr>
+              <td>ENSO-corrected</td>
+              <td class="num">{{ '%+.5f' | format(ec.corrected.slope) }}</td>
+              <td class="num">{{ '%.4f' | format(ec.corrected.p_value) }}</td>
+              <td><i class="p-icon--{% if ec.corrected.significant %}success{% else %}error{% endif %}"></i></td>
+            </tr>
+          </tbody>
+        </table>
+        {% if ec.component_years and ec.component_years | length > 0 %}
+        <div style="position:relative; height:300px; margin-top:1.5rem">
+          <canvas id="decomp-chart"></canvas>
+        </div>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      {# Seasonal breakdown #}
+      {% if r.seasonal %}
+      <div class="p-section" id="seasonal">
+        <h2>Seasonal breakdown</h2>
+        <p class="u-text--muted section-sub">Which part of the year is driving the change most strongly. DJF = December-January-February, MAM = March-April-May, JJA = June-July-August, SON = September-October-November.</p>
+        <table>
+          <thead>
+            <tr><th>Season</th><th>Slope ({{ ud_unit }}/yr)</th><th>p-value</th><th>Significant</th></tr>
+          </thead>
+          <tbody>
+            {% for season in ['DJF', 'MAM', 'JJA', 'SON'] %}
+            {% if season in r.seasonal %}
+            {% set s = r.seasonal[season] %}
+            <tr>
+              <td>{{ season }}</td>
+              <td class="num">{{ '%+.5f' | format(s.slope) }}</td>
+              <td class="num">{{ '%.4f' | format(s.p) }}</td>
+              <td><i class="p-icon--{% if s.significant %}success{% else %}error{% endif %}"></i></td>
+            </tr>
+            {% endif %}
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% endif %}
+
+      {# Mobile back link #}
+      <div class="p-section u-hide--large">
+        <hr class="p-rule" />
+        <a href="/" class="p-button--base has-icon">
+          <i class="p-icon--chevron-left"></i><span>New analysis</span>
+        </a>
+      </div>
+
+    </main>
+  </div>
+</section>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+var years     = {{ result.annual_years | tojson }};
+var vals      = {{ result.annual_vals  | tojson }};
+var slope     = {{ result.slope     | tojson }};
+var intercept = {{ result.intercept | tojson }};
+{% if result.enso_correction and result.enso_correction.available %}
+var corrected = {{ result.enso_correction.corrected_vals | tojson }};
+{% else %}
+var corrected = null;
+{% endif %}
+
+var CH_GRID  = '#e5e5e5';
+var CH_TEXT  = '#666';
+var CH_BLUE  = '#06c';
+var CH_ORA   = '#4f46e5';
+var CH_GRN   = '#7c3aed';
+var CH_RED   = '#c7162b';
+var CH_MONO  = "'Ubuntu Mono', monospace";
+
+var trendVals = years.map(function(yr, i) { return intercept + slope * i; });
+
+var datasets = [{
+  label: 'Observed ({{ label }})',
+  data: vals,
+  borderColor: CH_BLUE,
+  backgroundColor: 'rgba(6,102,204,0.08)',
+  borderWidth: 1.5,
+  pointRadius: 2,
+  tension: 0.1,
+}, {
+  label: "Sen's slope",
+  data: trendVals,
+  borderColor: CH_RED,
+  backgroundColor: 'transparent',
+  borderWidth: 1.5,
+  borderDash: [5, 3],
+  pointRadius: 0,
+  tension: 0,
+}];
+
+if (corrected) {
+  datasets.push({
+    label: 'ENSO-corrected',
+    data: corrected,
+    borderColor: CH_ORA,
+    backgroundColor: 'transparent',
+    borderWidth: 1.5,
+    borderDash: [4, 3],
+    pointRadius: 0,
+    tension: 0.1,
+  });
+}
+
+var crosshairPlugin = {
+  id: 'crosshair',
+  afterDraw: function(chart) {
+    if (!chart.tooltip._active || !chart.tooltip._active.length) return;
+    var ctx = chart.ctx;
+    var x = chart.tooltip._active[0].element.x;
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(x, chart.chartArea.top);
+    ctx.lineTo(x, chart.chartArea.bottom);
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = 'rgba(0,0,0,0.15)';
+    ctx.setLineDash([4, 3]);
+    ctx.stroke();
+    ctx.restore();
+  }
+};
+
+function baseOpts(yLabel) {
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: { mode: 'index', intersect: false },
+    plugins: {
+      legend: { labels: { color: CH_TEXT, font: { family: CH_MONO } } },
+      tooltip: { mode: 'index', intersect: false }
+    },
+    scales: {
+      x: { ticks: { color: CH_TEXT, maxTicksLimit: 12 }, grid: { color: CH_GRID } },
+      y: { ticks: { color: CH_TEXT }, grid: { color: CH_GRID },
+           title: { display: true, text: yLabel, color: CH_TEXT } }
+    }
+  };
+}
+
+new Chart(document.getElementById('ts-chart'), {
+  type: 'line',
+  data: { labels: years, datasets: datasets },
+  options: baseOpts('{{ ud_unit }}'),
+  plugins: [crosshairPlugin]
+});
+
+{% if result.enso_correction and result.enso_correction.available and result.enso_correction.component_years %}
+(function() {
+  var dy = {{ result.enso_correction.component_years | tojson }};
+  var ec = {{ result.enso_correction.enso_component   | tojson }};
+  var tc = {{ result.enso_correction.trend_component  | tojson }};
+  var ay = {{ result.annual_years | tojson }};
+  var av = {{ result.annual_vals  | tojson }};
+  if (!dy || !dy.length) return;
+  var yv = {};
+  for (var i = 0; i < ay.length; i++) yv[ay[i]] = av[i];
+  var oc = dy.map(function(yr) { return yv[yr]; });
+  var opts = baseOpts('{{ ud_unit }}');
+  opts.plugins.title = {
+    display: true, text: 'Signal decomposition',
+    color: CH_TEXT, font: { family: CH_MONO, size: 12 }
+  };
+  opts.plugins.legend.labels.boxWidth = 20;
+  new Chart(document.getElementById('decomp-chart'), {
+    type: 'line',
+    data: { labels: dy, datasets: [
+      { label: 'Observed', data: oc, borderColor: CH_BLUE, backgroundColor: 'transparent', borderWidth: 1.5, pointRadius: 0, tension: 0.1 },
+      { label: 'ENSO component', data: ec, borderColor: CH_ORA, backgroundColor: 'transparent', borderWidth: 1, pointRadius: 0, tension: 0.1 },
+      { label: 'Trend (anthropogenic)', data: tc, borderColor: CH_GRN, backgroundColor: 'transparent', borderWidth: 2, borderDash: [6,3], pointRadius: 0, tension: 0 },
+    ]},
+    options: opts,
+    plugins: [crosshairPlugin]
+  });
+})();
+{% endif %}
+</script>
+
+{% if not sig and r.trajectory and r.trajectory.fan_paths %}
+<script>
+(function () {
+  var fanPaths = {{ r.trajectory.fan_paths | tojson }};
+  var fanYears = {{ r.trajectory.fan_years | tojson }};
+  var mcMedian = {{ r.trajectory.mc_median | tojson }};
+  var ciLow    = {{ r.trajectory.mc_pi_low  | tojson }};
+  var ciHigh   = {{ r.trajectory.mc_pi_high | tojson }};
+  if (!fanPaths || !fanPaths.length) return;
+  var histLen = years.length;
+
+  /* percentile from a pre-sorted array */
+  function pct(sorted, p) {
+    if (!sorted.length) return null;
+    var idx = p / 100 * (sorted.length - 1);
+    var lo = Math.floor(idx), hi = Math.ceil(idx);
+    if (lo === hi) return sorted[lo];
+    return sorted[lo] + (sorted[hi] - sorted[lo]) * (idx - lo);
+  }
+
+  /* build sorted column at each future time step across all paths */
+  var T = fanPaths[0] ? fanPaths[0].length : 0;
+  var cols = [];
+  for (var j = 0; j < T; j++) {
+    var col = [];
+    for (var i = 0; i < fanPaths.length; i++) {
+      var v = fanPaths[i][j];
+      if (v != null) col.push(v);
+    }
+    col.sort(function(a, b) { return a - b; });
+    cols.push(col);
+  }
+
+  /* trim x-axis: only display up to where fan data exists + small buffer.
+     for near-significant trends most paths cross at step 1-2, so T=60 is
+     mostly empty -- this avoids a tiny speck of fan followed by blank space. */
+  var lastNonEmpty = 0;
+  for (var j = 0; j < T; j++) {
+    if (cols[j].length > 0) lastNonEmpty = j;
+  }
+  var ciHighIdx = ciHigh != null ? fanYears.indexOf(ciHigh) : -1;
+  var displayT  = Math.min(T, Math.max(lastNonEmpty + 4, ciHighIdx >= 0 ? ciHighIdx + 4 : 12));
+  var trimmedFanYears = fanYears.slice(0, displayT);
+
+  var allLabels = years.concat(trimmedFanYears);
+  var histData  = vals.slice();
+  for (var i = 0; i < trimmedFanYears.length; i++) histData.push(null);
+
+  var BANDS = [
+    { lo: 10, hi: 90, fill: 'rgba(6,102,204,0.07)' },
+    { lo: 25, hi: 75, fill: 'rgba(6,102,204,0.13)' },
+    { lo: 40, hi: 60, fill: 'rgba(6,102,204,0.20)' },
+  ];
+
+  var fanPlugin = {
+    id: 'fanOverlay',
+    beforeDatasetsDraw: function(chart) {
+      var ctx = chart.ctx, xs = chart.scales.x, ys = chart.scales.y;
+      var anchorX = xs.getPixelForValue(histLen - 1);
+      var anchorY = ys.getPixelForValue(vals[histLen - 1]);
+
+      ctx.save();
+
+      /* filled percentile bands, widest first so inner covers outer's edge */
+      for (var b = 0; b < BANDS.length; b++) {
+        var band = BANDS[b];
+        ctx.beginPath();
+        ctx.moveTo(anchorX, anchorY);
+        /* forward along upper percentile */
+        for (var j = 0; j < displayT; j++) {
+          var v = pct(cols[j], band.hi);
+          if (v == null) continue;
+          ctx.lineTo(xs.getPixelForValue(histLen + j), ys.getPixelForValue(v));
+        }
+        /* backward along lower percentile */
+        for (var j = displayT - 1; j >= 0; j--) {
+          var v = pct(cols[j], band.lo);
+          if (v == null) continue;
+          ctx.lineTo(xs.getPixelForValue(histLen + j), ys.getPixelForValue(v));
+        }
+        ctx.closePath();
+        ctx.fillStyle = band.fill;
+        ctx.fill();
+      }
+
+      /* median line through the fan */
+      ctx.beginPath();
+      ctx.moveTo(anchorX, anchorY);
+      for (var j = 0; j < displayT; j++) {
+        var v = pct(cols[j], 50);
+        if (v == null) continue;
+        ctx.lineTo(xs.getPixelForValue(histLen + j), ys.getPixelForValue(v));
+      }
+      ctx.strokeStyle = 'rgba(6,102,204,0.65)';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([]);
+      ctx.stroke();
+
+      ctx.restore();
+    },
+    afterDatasetsDraw: function(chart) {
+      var ctx = chart.ctx, xs = chart.scales.x;
+      var top = chart.chartArea.top, bot = chart.chartArea.bottom;
+      /* vertical band marking the 85% PI for significance crossing year */
+      if (ciLow != null && ciHigh != null) {
+        var ix1 = allLabels.indexOf(ciLow), ix2 = allLabels.indexOf(ciHigh);
+        if (ix1 !== -1 && ix2 !== -1) {
+          ctx.save();
+          ctx.fillStyle = 'rgba(6,102,204,0.08)';
+          ctx.fillRect(xs.getPixelForValue(ix1), top,
+                       xs.getPixelForValue(ix2) - xs.getPixelForValue(ix1),
+                       bot - top);
+          ctx.restore();
+        }
+      }
+      /* dashed vertical line at MC median crossing year */
+      if (mcMedian != null) {
+        var mx = allLabels.indexOf(mcMedian);
+        if (mx !== -1) {
+          ctx.save();
+          ctx.beginPath();
+          ctx.moveTo(xs.getPixelForValue(mx), top);
+          ctx.lineTo(xs.getPixelForValue(mx), bot);
+          ctx.strokeStyle = 'rgba(0,0,0,0.4)';
+          ctx.lineWidth = 1.5;
+          ctx.setLineDash([5, 4]);
+          ctx.stroke();
+          ctx.restore();
+        }
+      }
+    }
+  };
+
+  new Chart(document.getElementById('fan-chart-canvas'), {
+    type: 'line',
+    data: { labels: allLabels, datasets: [{
+      label: 'Observed', data: histData,
+      borderColor: '#06c', backgroundColor: 'transparent',
+      borderWidth: 2, pointRadius: 2, tension: 0.1, spanGaps: false,
+    }]},
+    options: {
+      responsive: true, maintainAspectRatio: false, animation: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false } },
+      scales: {
+        x: { ticks: { color: '#666', maxTicksLimit: 12 }, grid: { color: '#e5e5e5' } },
+        y: { ticks: { color: '#666' }, grid: { color: '#e5e5e5' },
+             title: { display: true, text: '{{ ud_unit }}', color: '#666' } }
+      }
+    },
+    plugins: [fanPlugin]
+  });
+})();
+</script>
+{% endif %}
+
+{% if r.pvalue_series %}
+<script>
+(function() {
+  var pv = {{ r.pvalue_series | tojson }};
+  if (!pv || !pv.historical_years || !pv.historical_years.length) return;
+  var allYears = pv.historical_years.concat(pv.projected_years);
+  var datasets = [
+    {
+      label: 'Historical p-value',
+      data: pv.historical_years.map(function(yr, i) { return { x: yr, y: pv.historical_pvals[i] }; }),
+      borderColor: '#06c', backgroundColor: 'transparent', borderWidth: 1.5, pointRadius: 2, tension: 0.1,
+    },
+    {
+      label: 'p = 0.05 threshold',
+      data: allYears.map(function(yr) { return { x: yr, y: 0.05 }; }),
+      borderColor: '#c7162b', backgroundColor: 'transparent', borderWidth: 1, borderDash: [4,2], pointRadius: 0,
+    },
+  ];
+  if (pv.projected_years && pv.projected_years.length) {
+    datasets.push({
+      label: 'Projected (analytical)',
+      data: pv.projected_years.map(function(yr, i) { return { x: yr, y: pv.projected_pvals[i] }; }),
+      borderColor: '#4f46e5', backgroundColor: 'transparent', borderWidth: 1.5, borderDash: [6,3], pointRadius: 0, tension: 0.1,
+    });
+  }
+  new Chart(document.getElementById('pv-chart'), {
+    type: 'line',
+    data: { datasets: datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false, parsing: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { labels: { color: '#666', font: { family: "'Ubuntu Mono', monospace" } } },
+        tooltip: { mode: 'index', intersect: false },
+      },
+      scales: {
+        x: { type: 'linear', ticks: { color: '#666', maxTicksLimit: 12, stepSize: 5 }, grid: { color: '#e5e5e5' }, title: { display: true, text: 'Year', color: '#666' } },
+        y: { min: 0, max: 1.0, ticks: { color: '#666' }, grid: { color: '#e5e5e5' }, title: { display: true, text: 'p-value', color: '#666' } },
+      },
+    },
+  });
+})();
+</script>
+{% endif %}
+
+<script>
+(function () {
+  var nav = document.getElementById('drawer');
+  if (!nav) return;
+  var links = Array.from(nav.querySelectorAll('.p-side-navigation__link[href^="#"]'));
+  if (!links.length) return;
+
+  function setActive(id) {
+    links.forEach(function (a) {
+      var active = a.getAttribute('href') === '#' + id;
+      a.classList.toggle('is-active', active);
+    });
+  }
+
+  var sectionIds = links.map(function (a) { return a.getAttribute('href').slice(1); });
+  var sections   = sectionIds.map(function (id) { return document.getElementById(id); }).filter(Boolean);
+  if (!sections.length) return;
+
+  /* narrow band across the upper viewport: fires once per crossing, no jitter */
+  var observer = new IntersectionObserver(function (entries) {
+    entries.forEach(function (entry) {
+      if (entry.isIntersecting) setActive(entry.target.id);
+    });
+  }, { rootMargin: '-20% 0px -75% 0px', threshold: 0 });
+
+  sections.forEach(function (s) { observer.observe(s); });
+})();
+</script>
+
+{% endblock %}

@@ -1,0 +1,430 @@
+{% extends "base.html" %}
+{% block title %}how it works - tidemark{% endblock %}
+
+{% block content %}
+
+<section class="p-strip is-shallow u-no-padding--bottom">
+  <div class="row--50-50 p-section">
+    <div class="col">
+      <h1>How tidemark works</h1>
+      <p class="u-text--muted">No science background required.</p>
+    </div>
+    <div class="col">
+      <p>
+        tidemark reads up to 45 years of NASA data for any place on Earth
+        and answers two questions that no other tool answers: when will a climate
+        trend become statistically confirmed, and what will it reach after that.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section class="p-section" id="what-is-a-trend">
+  <div class="u-fixed-width p-section--shallow">
+    <hr class="p-rule" />
+    <h2>What is a trend?</h2>
+  </div>
+  <div class="u-fixed-width">
+    <div class="col-start-large-4 col-9 col-medium-5 col-start-medium-2">
+      <p>
+        A trend is a consistent direction of change over time. If your city's average
+        temperature was slightly higher each decade for 40 years in a row, that is a
+        trend. If it went up some years and down others with no overall direction,
+        that is noise.
+      </p>
+      <p>
+        The tricky part is telling the difference. Any short stretch of years can look
+        like a trend just by chance. Scientists use a test called Mann-Kendall to check
+        whether the direction is consistent enough to be real, or whether it could just
+        be a lucky run of similar years.
+      </p>
+      <p>
+        tidemark runs that test on real NASA data for whatever location and variable you
+        pick, then goes further and tells you what the result means in plain terms.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section class="p-section" id="p-value">
+  <div class="u-fixed-width p-section--shallow">
+    <hr class="p-rule" />
+    <h2>What does "statistically significant" mean?</h2>
+  </div>
+  <div class="u-fixed-width">
+    <div class="col-start-large-4 col-9 col-medium-5 col-start-medium-2">
+      <p>
+        A result is called statistically significant when the chance of seeing it in
+        purely random data is less than 5 in 100. Scientists write this as p &lt; 0.05.
+      </p>
+      <p>
+        Think of it like a court verdict. p &lt; 0.05 is not proof that the trend is
+        real. It means the evidence is strong enough that we would be wrong to ignore
+        it. p &gt; 0.05 means the data is not yet convincing, not that nothing is
+        happening.
+      </p>
+      <p>
+        The p-value depends partly on how many years of data you have. A short record
+        cannot confirm a small trend even if the trend is real. This is the central
+        insight that tidemark is built around.
+      </p>
+
+      <hr class="p-rule--muted" />
+      <div class="row p-section--shallow">
+        <div class="col-3 col-medium-2">
+          <h3 class="p-heading--5">An analogy</h3>
+        </div>
+        <div class="col-6 col-medium-3">
+          <p>
+            Imagine you flip a coin and get heads seven times in a row. That feels
+            suspicious, but it happens in roughly 1 in 128 fair flips. With only seven
+            flips you cannot prove the coin is rigged. With 1000 flips and 700 heads,
+            the evidence is overwhelming.
+          </p>
+          <p>
+            Climate data works the same way. A small warming trend needs a long record
+            before the signal rises above the background noise. tidemark tells you how
+            long that record needs to be.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="p-section" id="the-gap">
+  <div class="u-fixed-width p-section--shallow">
+    <hr class="p-rule" />
+    <h2>The question no tool was answering</h2>
+  </div>
+  <div class="u-fixed-width">
+    <div class="col-start-large-4 col-9 col-medium-5 col-start-medium-2">
+      <p>
+        Dr. James Aker at NASA Goddard said it plainly in the challenge brief:
+        <em>"Sometimes all a trend needs to become significant is a longer period."</em>
+        Every existing tool ignores that sentence. tidemark is built around it.
+      </p>
+      <p>
+        Every existing climate analysis tool, from NASA Giovanni to the R trend
+        package, runs the significance test and returns two numbers: the slope of the
+        trend, and whether p is below 0.05. Then it stops.
+      </p>
+      <p>
+        If the answer is "not yet significant", you are left with nothing. You do not
+        know if you need five more years of data or fifty. You do not know whether
+        the trend is real but underseen, or genuinely absent. No tool told you.
+      </p>
+      <p>
+        Cairo rainfall is a concrete example of what that silence costs. The standard
+        analytical formula, which every existing tool uses, says this trend will become
+        significant around 2128. tidemark's Monte Carlo estimate says 2051. The 77-year
+        gap exists because Cairo's rainfall residuals are right-skewed, and the standard
+        formula assumes a bell curve. tidemark detects that mismatch, names it, and
+        directs you to the estimate that is correct for the actual noise structure.
+      </p>
+
+      <hr class="p-rule--muted" />
+      <div class="row p-section--shallow">
+        <div class="col-3 col-medium-2">
+          <h3 class="p-heading--5">What tidemark adds</h3>
+        </div>
+        <div class="col-6 col-medium-3">
+          <p>
+            If a trend is not yet significant, tidemark projects forward in time to
+            find the year when the data record would be long enough for the test to
+            pass. It calls this the significance trajectory.
+          </p>
+          <p>
+            If a trend is already significant, tidemark projects the slope forward to
+            named real-world thresholds: the Paris Agreement temperature targets, the
+            World Meteorological Organization drought classifications, and the FAO crop
+            water stress limits. It returns a year, not a range, not a scenario.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="p-section" id="how-the-math-works">
+  <div class="u-fixed-width p-section--shallow">
+    <hr class="p-rule" />
+    <h2>How the prediction works</h2>
+  </div>
+  <div class="u-fixed-width">
+    <div class="col-start-large-4 col-9 col-medium-5 col-start-medium-2">
+      <p>
+        The Mann-Kendall test produces a score called Z. When Z passes 1.96, the trend
+        is considered significant. The key fact is that Z grows predictably as you add
+        more years of data. The math behind this means the crossing year is
+        calculable.
+      </p>
+      <p>
+        tidemark computes that crossing year three independent ways and compares them.
+        Each method makes different assumptions about the shape of the data. If all
+        three agree, the estimate is trustworthy. If they disagree, tidemark diagnoses
+        why and tells you which one to trust.
+      </p>
+
+      <hr class="p-rule--muted" />
+      <div class="row p-section--shallow">
+        <div class="col-3 col-medium-2">
+          <h3 class="p-heading--5">Why three methods?</h3>
+        </div>
+        <div class="col-6 col-medium-3">
+          <p>
+            Two of the methods assume that the random variation in the data follows a
+            bell curve, the way heights in a population do. That assumption is fine for
+            temperature. It is wrong for rainfall in dry regions, where most months are
+            near zero and occasional heavy rains spike far above the average.
+          </p>
+          <p>
+            When you apply the bell-curve method to skewed data, you get a confident
+            wrong answer. For Cairo's rainfall, the two formula-based methods predict
+            significance around 2128. The simulation method, which makes no assumption
+            about the data shape, says 2051. That is a 77-year error.
+          </p>
+          <p>
+            tidemark detects this automatically. It runs a normality test on the
+            residuals, checks whether the methods diverge, and if they do, it shows
+            you which methods are invalid and routes you to the correct one.
+          </p>
+        </div>
+      </div>
+
+      <hr class="p-rule--muted" />
+      <div class="row p-section--shallow">
+        <div class="col-3 col-medium-2">
+          <h3 class="p-heading--5">What is Monte Carlo?</h3>
+        </div>
+        <div class="col-6 col-medium-3">
+          <p>
+            Monte Carlo is a way of using random simulation to answer a question you
+            cannot solve with a formula. The name comes from the casino in Monaco,
+            because the method is built on random draws.
+          </p>
+          <p>
+            tidemark runs 1000 simulations. In each one, it extends the existing data
+            record forward by drawing randomly from the actual residuals, the year-to-year
+            wobble already in the real data. It then checks when the significance test
+            passes in each simulation. The median year across all 1000 runs is the
+            prediction. The spread of the results gives you the confidence interval.
+          </p>
+          <p>
+            Because it draws from the real data rather than from a theoretical bell
+            curve, it handles skewed and irregular data correctly.
+          </p>
+        </div>
+      </div>
+
+      <hr class="p-rule--muted" />
+      <div class="row p-section--shallow">
+        <div class="col-3 col-medium-2">
+          <h3 class="p-heading--5">The theoretical minimum</h3>
+        </div>
+        <div class="col-6 col-medium-3">
+          <p>
+            There is a hard floor on how early any test can confirm a trend, set by the
+            mathematics of information theory. It is called the Cramer-Rao bound. No
+            method, however clever, can detect the trend in fewer years than this floor
+            allows. It depends only on the noise level and the shape of the noise
+            distribution.
+          </p>
+          <p>
+            For bell-curve noise, the Cramer-Rao bound agrees closely with the Weatherhead
+            formula. For skewed noise, the bound is shorter, which means Weatherhead
+            overstates how long detection will take. tidemark computes this bound on every
+            result and shows it next to the other three estimates. If the Monte Carlo
+            crossing year is close to the bound, you are near the theoretical limit. If it
+            is far above it, the noise structure is the obstacle.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="p-section" id="detection-floor">
+  <div class="u-fixed-width p-section--shallow">
+    <hr class="p-rule" />
+    <h2>The detection floor</h2>
+  </div>
+  <div class="u-fixed-width">
+    <div class="col-start-large-4 col-9 col-medium-5 col-start-medium-2">
+      <p>
+        Every result includes a detection floor: the smallest slope that the current
+        record length could possibly confirm. If the actual trend is smaller than the
+        floor, no test can find it yet, regardless of direction.
+      </p>
+      <p>
+        tidemark shows the ratio of your trend's slope to the floor. A ratio above 1.0
+        means the signal is large enough to detect. Below 1.0 means the record is
+        simply too short to say anything yet, and the significance trajectory answer
+        needs to be read in that light.
+      </p>
+
+      <hr class="p-rule--muted" />
+      <div class="row p-section--shallow">
+        <div class="col-3 col-medium-2">
+          <h3 class="p-heading--5">An analogy</h3>
+        </div>
+        <div class="col-6 col-medium-3">
+          <p>
+            It is like a scale that cannot read below 1 kilogram. If a package weighs
+            800 grams, the scale will not detect it, but the package still has weight.
+            The floor tells you what the scale's minimum is so you know when to trust
+            the reading and when to get a more sensitive instrument, which here means
+            waiting for more years of data.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="p-section" id="enso">
+  <div class="u-fixed-width p-section--shallow">
+    <hr class="p-rule" />
+    <h2>Separating climate from weather cycles</h2>
+  </div>
+  <div class="u-fixed-width">
+    <div class="col-start-large-4 col-9 col-medium-5 col-start-medium-2">
+      <p>
+        El Nino and La Nina are natural swings in Pacific Ocean temperatures that
+        repeat every few years. They push global temperatures up or down by roughly
+        half a degree and cause major swings in rainfall patterns across Asia, Africa,
+        and the Americas. They are not a trend. They are a natural cycle.
+      </p>
+      <p>
+        If you run a trend test on raw temperature data without accounting for El Nino,
+        you might detect a trend that is partly or entirely explained by which phase of
+        the cycle the data happened to end on. tidemark removes the El Nino signal using
+        NOAA's official MEI v2 index before running the test.
+      </p>
+      <p>
+        The output shows both results: the raw trend and the ENSO-corrected trend. If
+        they are meaningfully different, it means the natural cycle was masking or
+        amplifying the underlying long-term change.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section class="p-section" id="data-source">
+  <div class="u-fixed-width p-section--shallow">
+    <hr class="p-rule" />
+    <h2>Where the data comes from</h2>
+  </div>
+  <div class="u-fixed-width">
+    <div class="col-start-large-4 col-9 col-medium-5 col-start-medium-2">
+      <p>
+        tidemark draws from four NASA data sources depending on the variable you
+        select. All measurements are monthly averages or composites. No data is
+        stored on our servers.
+      </p>
+
+      <hr class="p-rule--muted" />
+      <div class="row p-section--shallow">
+        <div class="col-3 col-medium-2">
+          <h3 class="p-heading--5">NASA POWER</h3>
+        </div>
+        <div class="col-6 col-medium-3">
+          <p>
+            Temperature, humidity, evaporation, wind, and soil variables come from
+            NASA POWER (Prediction Of Worldwide Energy Resources), a free dataset
+            produced at NASA Goddard combining MERRA-2 reanalysis with satellite
+            observations. Coverage from 1981. No account required.
+          </p>
+        </div>
+      </div>
+
+      <hr class="p-rule--muted" />
+      <div class="row p-section--shallow">
+        <div class="col-3 col-medium-2">
+          <h3 class="p-heading--5">GPM IMERG</h3>
+        </div>
+        <div class="col-6 col-medium-3">
+          <p>
+            Precipitation comes from NASA GPM IMERG (Global Precipitation Measurement,
+            Integrated Multi-satellitE Retrievals), accessed via NASA GES DISC.
+            Coverage from 2001. Requires NASA Earthdata login.
+          </p>
+        </div>
+      </div>
+
+      <hr class="p-rule--muted" />
+      <div class="row p-section--shallow">
+        <div class="col-3 col-medium-2">
+          <h3 class="p-heading--5">AppEEARS MODIS</h3>
+        </div>
+        <div class="col-6 col-medium-3">
+          <p>
+            Land surface temperature and evapotranspiration come from MODIS
+            satellite composites via NASA AppEEARS. Coverage from 2001.
+            Requires NASA Earthdata login.
+          </p>
+        </div>
+      </div>
+
+      <hr class="p-rule--muted" />
+      <div class="row p-section--shallow">
+        <div class="col-3 col-medium-2">
+          <h3 class="p-heading--5">Variables available</h3>
+        </div>
+        <div class="col-6 col-medium-3">
+          <ul class="p-list">
+            <li class="p-list__item">Temperature (average, maximum, minimum) &mdash; 1981+</li>
+            <li class="p-list__item">Precipitation &mdash; 2001+ (GPM IMERG)</li>
+            <li class="p-list__item">Relative humidity &mdash; 1981+</li>
+            <li class="p-list__item">Evaporation over land &mdash; 1981+</li>
+            <li class="p-list__item">Wind speed &mdash; 1981+</li>
+            <li class="p-list__item">Land surface temperature &mdash; 2001+ (MODIS)</li>
+            <li class="p-list__item">Evapotranspiration &mdash; 2001+ (MODIS)</li>
+            <li class="p-list__item">Vegetation index (NDVI) &mdash; 2000+ (MODIS)</li>
+          </ul>
+          <p>
+            Record length varies by variable. Temperature and humidity have up to
+            45 years (1981-2025). Precipitation, land surface temperature, and
+            evapotranspiration start from 2001, giving up to 25 years.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="p-section" id="limitations">
+  <div class="u-fixed-width p-section--shallow">
+    <hr class="p-rule" />
+    <h2>What tidemark does not do</h2>
+  </div>
+  <div class="u-fixed-width">
+    <div class="col-start-large-4 col-9 col-medium-5 col-start-medium-2">
+      <p>
+        A significance trajectory is not a forecast. tidemark is not a climate model.
+        It does not simulate future emissions, land use change, or ocean circulation.
+        It assumes the current trend continues at its current rate. If conditions
+        change, the trajectory changes.
+      </p>
+      <p>
+        The milestone projections for Paris Agreement temperatures and WMO drought
+        thresholds are extrapolations of the existing trend, not predictions of what
+        will happen. They answer the question: if nothing changes from the current
+        trajectory, when would this variable reach this threshold?
+      </p>
+      <p>
+        Results are only as good as the underlying NASA data. POWER uses a 0.5 by 0.5
+        degree grid. For small islands, complex terrain, or coastal transition zones,
+        the grid cell may not represent the precise location you have in mind.
+      </p>
+
+      <hr class="p-rule--muted" />
+      <div class="p-cta-block">
+        <a href="/#analyze" class="p-button--positive">Run an analysis</a>
+        <a href="/whitepaper.pdf" target="_blank" rel="noopener" class="p-button">Read the whitepaper</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+{% endblock %}

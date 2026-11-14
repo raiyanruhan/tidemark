@@ -1,0 +1,405 @@
+/**
+  Whenever an even-numbered heading directly follows its parent heading (e.g., h2 after h1),
+  we need to move it up under the parent heading above by the amount of bottom margin + top padding of the parent heading.
+  This is the only element of type levels that extend behavior between heading levels, in order to ensure
+  placeholder extensions apply the correct margin (h1 and h2 must extend the same placeholder in order for the rule to apply)
+ */
+/*
+  @classreference
+    Article block:
+      .p-article-block:
+        Container for blog article content
+      .p-article-block__item:
+        Individual content block within article block
+      .p-article-block__image:
+        An image within an article block
+      .p-article-block__title:
+        The title of the article block
+      .p-article-block__metadata:
+        Metadata container
+      .p-article-block__metadata-item:
+        Individual metadata item with middot separator between items
+*/
+/*
+  @classreference
+  blog:
+    Blog:
+      .p-blog:
+        Main element of the blog pattern.
+      .p-blog__articles:
+        Container for blog articles.
+*/
+/*
+  @classreference
+  code-snippet:
+    Root element:
+        .p-code-snippet:
+            Main element of the code snippet component.
+        "&.is-bordered":
+            Bordered variant, to be used when additional content (such as iframes) is used inside the code snippet component.
+
+    Code block:
+        .p-code-snippet__block:
+            Code block without any additional styling elements.
+        "&.is-wrapped":
+            Code block with wrapped content in lines.
+        .p-code-snippet__block--icon:
+            Code block that starts with an icon. Default icon is a UNIX prompt. To be used with Linux CLI examples.
+        "&.is-windows-prompt":
+            Changes the `.p-code-snippet__block--icon` to use a Windows prompt icon. To be used with Windows CLI examples.
+        "&.is-url":
+            Changes the `.p-code-snippet__block--icon` to use a link icon. To be used with URLs.
+        .p-code-snippet__block--numbered:
+            Code block with numbered lines of code (to be used with longer pieces of code examples). Requires `.p-code-snippet__line`.
+
+    Code line:
+        .p-code-snippet__line:
+            A wrapper around single line of code. Needed with numbered variant of a code block.
+
+    Code block header:
+        .p-code-snippet__header:
+            A header of a code block. Contains a title and optional dropdowns.
+        "&.is-stacked":
+            A stacked version of a header (with a title displayed above the dropdowns). To be used when there are multiple dropdowns with a long title.
+
+    Code block title:
+        .p-code-snippet__title:
+            The title of a code block.
+
+    Dropdowns container:
+        .p-code-snippet__dropdowns:
+            The container element for any dropdowns in the header.
+
+    Dropdown:
+        .p-code-snippet__dropdown:
+            An individual dropdown in code block header.
+*/
+/*
+  @classreference
+  content-card:
+    Content card:
+      .p-content-card:
+        Main element of the content card component.
+      "&.p-content-card--cols-2":
+        Modifier for a 2-column width vertical layout. Applied ONLY to the parent .p-content-card.
+      "&.p-content-card--cols-4":
+        Modifier for a 4-column width horizontal layout. Applied ONLY to the parent .p-content-card.
+      "&.p-content-card--cols-6":
+        Modifier for a 6-column width horizontal layout. Applied ONLY to the parent .p-content-card.
+      "&.p-content-card--cols-8":
+        Modifier for an 8-column (full-width) layout with 50/50 content and image split on desktop. Applied ONLY to the parent .p-content-card. Image is required.
+      "&.p-content-card--image-top":
+        Modifier that forces the image to appear above the content on all breakpoints and all column variants, overriding the default horizontal and grid layouts.
+      "&.has-image":
+        State class applied to the parent when the card includes an image.
+      "&.has-desc":
+        State class applied to the parent when the card includes a description. For col-2/4/6 the description slides up on hover; for col-8 it is always visible below the heading.
+      "&.is-dark":
+        Dark theme for cards on a dark background, theming the card border and footer rule. Applied ONLY to the parent .p-content-card.
+    Links:
+      .p-content-card__overlay-link:
+        Invisible absolute link spanning the entire card to make it clickable.
+      .p-content-card__main-link:
+        The primary text link, typically wrapping the heading.
+      .p-content-card__author-link:
+        Interactive link for the author name.
+    Media:
+      .p-content-card__image-wrapper:
+        Container for the card's image. Styled contextually by parent modifiers.
+      .p-content-card__image:
+        The image element, maintaining a 16/9 aspect ratio. Styled contextually by parent modifiers.
+    Content:
+      .p-content-card__content:
+        Flex container wrapping the main body and footer of the card.
+      .p-content-card__body:
+        Grid container holding both the primary and hover content areas. Styled contextually by parent modifiers.
+      .p-content-card__primary-content:
+        The default visible content area (heading, author, date).
+      .p-content-card__hover-content:
+        The content area that slides up on hover (description).
+      .p-content-card__heading:
+        The card's title element. Styled contextually by parent modifiers.
+      .p-content-card__description:
+        The text description that appears on hover. Styled contextually by parent modifiers.
+      .p-content-card__author-and-date:
+        Container for the author and publication date. Styled contextually by parent modifiers.
+    Footer:
+      .p-content-card__footer-outer:
+        Outer container for the footer section. Styled contextually by parent modifiers.
+      .p-content-card__footer-inner:
+        Horizontally scrollable inner container for footer metadata (chips, icons).
+      .p-content-card__icon:
+        Icon element utilized within the footer.
+      .p-content-card__small:
+        Small text element utilized within the footer.
+*/
+/*
+  @classreference
+  cta-block:
+    CTA Block:
+      .p-cta-block:
+        Main element of the CTA block.
+      "&.is-borderless":
+        Deprecated modifier class that removed top border and padding before v4.25.0. This is now the default behavior, so this class is no longer needed.
+      "&.has-border":
+        Deprecated modifier class that adds a top border and padding.
+*/
+/*
+  @classreference
+  equal-height-row:
+    Equal height row:
+      .p-equal-height-row:
+        Main element of the equal height row component.
+      "&.has-divider-1":
+        Cross-column divider shown between the first and second grid rows.
+      "&.has-divider-2":
+        Cross-column divider shown between the second and third grid rows.
+      "&.has-divider-3":
+        Cross-column divider shown between the third and fourth grid rows.
+      .p-equal-height-row--wrap:
+        Wraps contents such that two items appear per row on medium screen sizes.
+    Column:
+      .p-equal-height-row__col:
+        Column element within an equal height row.
+      .p-equal-height-row__col.is-borderless:
+        Column element within an equal height row with no top border.
+    Item:
+      .p-equal-height-row__item:
+        Item element within an equal height row column.
+*/
+/*
+  @classreference
+  image-container:
+    Image container:
+      .p-image-container:
+        Main element of the image component.
+      "&.is-cover":
+        Cover variant, to be used to set the `.p-image-container__image` within to cover the container.
+      "&.is-highlighted":
+        Highlighted variant, to be used to highlight contents.
+      .p-image-container--16-9:
+        Wraps contents in a container with an aspect ratio of 16:9.
+      .p-image-container--3-2:
+        Wraps contents in a container with an aspect ratio of 3:2.
+      .p-image-container--2-3:
+        Wraps contents in a container with an aspect ratio of 2:3.
+      .p-image-container--cinematic:
+        Wraps contents in a container with an aspect ratio of 2.4:1.
+      .p-image-container--square:
+        Wraps contents in a container with an aspect ratio of 1:1.
+      .p-image-container--auto-height:
+        Stretches the container to the height of an adjacent grid column, clamped between a 16:9 minimum and a 2:3 maximum of the column width using CSS container queries.
+      .p-image-container--auto-height-on-(small|medium|large):
+        Auto-height variant applied only at the specified breakpoint.
+      .p-image-container--(16-9|3-2|2-3|cinematic|square)-on-(small|medium|large):
+        Wraps contents in a container with the specified aspect ratio on the specified breakpoint.
+    Image:
+      .p-image-container__image:
+        Image element within an image container.
+*/
+/*
+  @classreference
+  notification:
+    Root element:
+        .p-notification:
+            Notification in default variant. Same as `.p-notification--information`.
+        .p-notification--information:
+            Information notification. Same as default `.p-notification`.
+        .p-notification--positive:
+            Positive notification.
+        .p-notification--caution:
+            Caution notification.
+        .p-notification--negative:
+            Negative notification.
+        "&.is-borderless":
+            Borderless variant of notification. Used when notification is embeded into another container element.
+        "&.is-inline":
+            Inline version of notification with title and message rendered side by side.
+
+    Content container:
+        .p-notification__content:
+            Container element for notification content (title and message).
+
+    Title:
+        .p-notification__title:
+            The notification title.
+
+    Message:
+        .p-notification__message:
+            Text of the notification message.
+
+    Close button:
+        .p-notification__close:
+            The button to close the notification.
+
+    Meta-data container:
+        .p-notification__meta:
+            The container element for notification meta-data (timestamp and action buttons).
+
+    Timestamp:
+        .p-notification__timestamp:
+            Notification timestamp or date.
+
+    Actions container:
+        .p-notification__actions:
+            Container element for notification action buttons.
+
+    Action button:
+        .p-notification__action:
+            Single action button.
+*/
+/*
+  @classreference
+  pricing-block:
+    Pricing block:
+      .p-pricing-block:
+        Main element of the pricing block component, to represent 4 cards.
+      .p-pricing-block--25-75:
+        Modifier class for 3 cards with a 25-75 split. The first 25% row is empty.
+      .p-pricing-block--50-50:
+        Modifier class for 2 cards, where each card takes up 50% of the row.
+    Column:
+      .p-pricing-block__tier:
+        Column element within a pricing block. Each column represents a card.
+*/
+/*
+  @classreference
+  newsletter-signup:
+    Newsletter signup:
+      .p-newsletter-signup:
+        Main element of the newsletter signup component.
+      .p-newsletter-signup--25-75:
+        Modifier class for a 25-75 split layout.
+      .p-newsletter-signup--50-50:
+        Modifier class for a 50-50 split layout.
+      .p-newsletter-signup--2-col:
+        Modifier class for a 2 column layout.
+        Takes at most 2 columns on large and medium dimensions.
+        Takes full width  on small dimensions.
+      .p-newsletter-signup--4-col:
+        Modifier class for a 4 column layout.
+        Takes at most 4 columns on large and medium dimensions.
+        Takes full width  on small dimensions.
+*/
+/*
+  @classreference
+  side-navigation:
+    Root element:
+        .p-side-navigation:
+            Side navigation in default variant.
+        .p-side-navigation--icons:
+            Side navigation with item icons.
+        .p-side-navigation--accordion:
+            Side navigation with expanding accordion items.
+        .p-side-navigation--raw-html:
+            Raw HTML version of side navigation (used with links generated by an external service).
+        "&.is-drawer-expanded":
+            Set `.is-drawer-expanded` when side navigation drawer is open on small screens.
+        "&.is-drawer-collapsed":
+            Set `.is-drawer-collapsed` when side navigation drawer is closed on small screens.
+        "&.is-drawer-hidden":
+            Set `.is-drawer-hidden` when side navigation drawer is closed on small screens.
+        "&.is-sticky":
+            Sticky version of side navigation.
+        "&.is-dark":
+            Side navigation in dark theme (if default is light).
+        "&.is-light":
+            Side navigation in light theme (if default is dark).
+
+    Overlay:
+        .p-side-navigation__overlay:
+            Screen overlay to display when side navigation drawer is open on small screens.
+
+    Drawer:
+        .p-side-navigation__drawer:
+            Side navigation drawer (to allow expanding and collapsing the navigation on small screens).
+
+    Drawer header:
+        .p-side-navigation__drawer-header:
+            Header of the side navigation drawer.
+
+    Toggle button:
+        .p-side-navigation__toggle:
+            Side navigation toggle button (to open side navigation on small screens).
+        .p-side-navigation__toggle--in-drawer:
+            Side navigation toggle button in drawer (to close navigation on small screens).
+
+    Items list heading:
+        .p-side-navigation__heading:
+            Heading for side navigation items group (text only).
+        .p-side-navigation__heading--linked:
+            Heading for side navigation items group that contains a link (`.p-side-navigation__link`).
+
+    Items list:
+        .p-side-navigation__list:
+            Group of side navigation items (usually a `<ul>` element).
+
+    Item element:
+        .p-side-navigation__item:
+            Single item in side navigation (usually a `<li>` element). May contain nested items lists.
+        .p-side-navigation__item--title:
+            Single title item in side navigation (usually a `<li>` element).
+        "&.has-active-child":
+            Set `.has-active-child` on a item that contains an active nested item. This is used in collapsible side navigation in application layout.
+
+    Item link:
+        .p-side-navigation__link:
+            Single link in the side navigation.
+
+    Item text:
+        .p-side-navigation__text:
+            Single text item in side navigation (for items that are not linked).
+
+    Item accordion button:
+        .p-side-navigation__accordion-button:
+            Single accordion button item in side navigation with `.p-side-navigation--accordion` variant.
+
+    Item icon:
+        .p-side-navigation__icon:
+            An icon in side navigation item (used with `.p-side-navigation--icons` variant).
+
+    Item status:
+        .p-side-navigation__status:
+            A container for status icon or label inside the navigation item.
+*/
+/*
+  @classreference
+  in-page-navigation:
+    Root element:
+      .p-in-page-navigation:
+        in-page navigation in default variant.
+      "&.is-sticky":
+        Sticky version of in-page navigation.
+
+    Dropdown toggle:
+      .p-in-page-navigation__dropdown-toggle:
+        Button to toggle between horizontal and vertical dropdown navigation on small/medium screens.
+      .p-in-page-navigation__dropdown-toggle-icon:
+        Chevron icon inside the dropdown toggle button.
+
+    Items list heading:
+      .p-in-page-navigation__heading:
+        Heading for in-page navigation items group (text only).
+
+    Items list:
+      .p-in-page-navigation__list:
+        Group of in-page navigation items (usually a `<ul>` element).
+
+    Item element:
+      .p-in-page-navigation__item:
+        Single item in in-page navigation (usually a `<li>` element). May contain nested items lists.
+
+    Item link:
+      .p-in-page-navigation__link:
+        Single link in the in-page navigation.
+*/
+/**
+  TODO this component has been deprecated. It will be removed in the next major version / not supported in Pragma.
+  The status label has been merged into the Chip component.
+  See https://github.com/canonical/vanilla-framework/issues/5535
+ */
+/**
+  TODO this component uses hard-coded colors that don't respond to theming, which is not ideal.
+    However, it looks fine on all themes, and re-working it to support theming is a larger undertaking.
+    So, it is being left as-is until it can be revisited as part of the tokens effort in the future.
+ */
