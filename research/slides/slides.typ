@@ -18,6 +18,7 @@
       #text(size: 0.85em)[Team Hylith · Bangladesh]
     ],
     date: [NASA Space Apps Challenge 2026 — Be An Earth System Trend Detective],
+    logo: image("favicon.png", width: 2.5em),
   ),
 )
 
@@ -149,7 +150,7 @@
 == The Significance Trajectory
 
 #cols[
-  *Three independent estimates + information floor:*
+  *Four independent estimates:*
 
   #v(0.3em)
 
