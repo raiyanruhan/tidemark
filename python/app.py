@@ -71,6 +71,8 @@ LOCATIONS = {
     "lagos":        (6.52,   3.38,   "Lagos, Nigeria"),
     "accra":        (5.56,   -0.20,  "Accra, Ghana"),
     "addisababa":   (9.03,   38.74,  "Addis Ababa, Ethiopia"),
+    "khartoum":     (15.55,  32.53,  "Khartoum, Sudan"),
+    "mogadishu":    (2.05,   45.34,  "Mogadishu, Somalia"),
     "dakar":        (14.72,  -17.47, "Dakar, Senegal"),
     "mumbai":       (19.08,  72.88,  "Mumbai, India"),
     "delhi":        (28.61,  77.21,  "New Delhi, India"),
@@ -103,9 +105,6 @@ LOCATIONS = {
     "saopaulo":     (-23.55, -46.63, "Sao Paulo, Brazil"),
     "buenosaires":  (-34.60, -58.38, "Buenos Aires, Argentina"),
     "sydney":       (-33.87, 151.21, "Sydney, Australia"),
-    "addisababa":   (9.03,   38.74,  "Addis Ababa, Ethiopia"),
-    "khartoum":     (15.55,  32.53,  "Khartoum, Sudan"),
-    "mogadishu":    (2.05,   45.34,  "Mogadishu, Somalia"),
 }
 
 # Tuple: (alias, code, label, unit, start_epoch)
@@ -131,8 +130,6 @@ VARIABLES = [
     ("et",                 "ET_MOD16",    "Evapotranspiration (MODIS)","mm/day",   2001),
     ("aod",                "MOD08_M3",    "Aerosol Optical Depth (MODIS)", "unitless", 2002),
 ]
-
-_VAR_EPOCH = {code: epoch for _, code, _, _, epoch in VARIABLES}
 
 VAR_BY_ALIAS = {v[0]: v for v in VARIABLES}
 VAR_BY_CODE  = {v[1]: v for v in VARIABLES}
