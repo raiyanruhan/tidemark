@@ -285,6 +285,11 @@
         </table>
         {% if t.mc_pi_low is not none and t.mc_pi_high is not none %}
         <p>85% prediction interval: <strong>{{ t.mc_pi_low }} to {{ t.mc_pi_high }}</strong></p>
+        {% elif t.mc_pi_low is not none %}
+        <p>85% prediction interval: <strong>{{ t.mc_pi_low }} to beyond {{ t.mc_horizon_year or 'the 80-year horizon' }}</strong></p>
+        {% endif %}
+        {% if t.mc_median is none %}
+        <p>Monte Carlo: not within the 80-year horizon ({{ (t.never_crossed_frac * 100) | round | int }}% of simulations never become significant).</p>
         {% endif %}
         {% if not t.methods_agree %}
         <div class="p-notification--caution">

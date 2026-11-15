@@ -363,22 +363,27 @@ fn print_trajectory(json: &serde_json::Value) {
         }
     }
 
+    // never-crossed paths are censored at the horizon: a null bound means "beyond it"
+    let horizon = traj["mc_horizon_year"].as_i64();
     match (mc_pi_low, mc_pi_high) {
         (Some(lo), Some(hi)) => {
             println!("  {:<18}{} - {}", "85% PI", lo, hi);
         }
+        (Some(lo), None) => match horizon {
+            Some(h) => println!("  {:<18}{} - beyond {}", "85% PI", lo, h),
+            None    => println!("  {:<18}{} - beyond the 80-year horizon", "85% PI", lo),
+        },
         _ => {
-            println!("  85% PI            (insufficient crossings)");
+            println!("  85% PI            (not within the 80-year horizon)");
         }
     }
 
-    if never_frac > 0.5 {
+    if mc_median.is_none() {
+        println!("  note   Monte Carlo median not within the 80-year horizon ({:.0}% of simulations never become significant)",
+            never_frac * 100.0);
+    } else if never_frac > 0.0 {
         let crossed = 1000u64.saturating_sub(never_crossed);
         println!("  note   {}/1000 simulations become significant within 80 years", crossed);
-    }
-
-    if phi > 0.2 {
-        println!("  note   residual autocorrelation phi={:.2}, MC crossing year may be 2-5 years optimistic", phi);
     }
 
     println!("  note   projection assumes observed trend continues at measured rate -- not a forecast");
