@@ -200,17 +200,19 @@
     <div class="col-start-large-4 col-9 col-medium-5 col-start-medium-2">
       <p class="u-text--muted">Dr. James Aker, NASA Goddard Space Flight Center, put the gap plainly in the
          challenge brief: <em>"Sometimes all a trend needs to become significant is a longer
-         period."</em> No existing tool tells you how much longer. We built the one that does.</p>
+         period."</em> We are not aware of a tool that tells you how much longer. We built one.</p>
       <p class="u-text--muted">NASA Giovanni, NOAA Climate Explorer, Copernicus CDS Toolbox, NCL, the R trend
          package. Every one of them runs Mann-Kendall and returns two numbers: the slope, and
          whether p is below 0.05. That is where they stop.</p>
-      <p class="u-text--muted">Cairo rainfall shows what that gap costs. The standard analytical formula returns
-         a crossing year around 2128. Tidemark's Monte Carlo estimate returns 2051. That 77-year
-         difference is not a speed improvement. It is a correctness difference. Cairo's
-         precipitation residuals are right-skewed. The analytical formula assumes a bell curve.
-         Applied to skewed data, it gives a confident wrong answer. Tidemark runs a normality
-         test on the residuals, detects the divergence, identifies the cause, and directs you
-         to the method that is correct for the actual noise structure of your data.</p>
+      <p class="u-text--muted">Cairo rainfall shows what that gap costs. The analytical formula returns
+         a crossing year around 2125; the Weatherhead formula 2078; the Monte Carlo median is
+         beyond 2105 — with 51.5% of simulated paths never crossing within the 80-year horizon.
+         The methods disagree by decades, and more than half the simulations say the record
+         cannot answer when significance will arrive. Cairo's precipitation residuals are
+         right-skewed (skewness 1.95). The standard formulas assume a bell curve. Applied to
+         skewed data, they give a confident wrong answer. Tidemark detects the divergence,
+         identifies the cause, and shows you the full range of estimates so you can judge
+         the uncertainty.</p>
 
       <hr class="p-rule--muted" />
       <div class="row p-section--shallow">
@@ -224,8 +226,8 @@
              ways and built a cross-validation layer that detects when they disagree and
              explains why.</p>
           <p>This calculation exists in the statistical literature on early warning
-             signals (Scheffer 2009, Lenton 2011) but has never been implemented as a
-             working tool against live NASA satellite data. We wrote it from scratch,
+             signals (Scheffer 2009, Lenton 2011). We are not aware of a prior implementation
+             against live NASA satellite data. We wrote it from scratch,
              validated it against up to 45 years of NASA data across four sources, and
              exposed it through a CLI and a web interface.</p>
         </div>
@@ -239,13 +241,11 @@
         <div class="col-6 col-medium-3">
           <p>The analytical formula assumes Gaussian noise. Tropical precipitation is not
              Gaussian. When you apply the wrong model, you get a confident wrong answer.
-             Cairo rainfall: analytical formula says significance in 2128, Monte Carlo
-             says 2051. A 77-year error, stated with false confidence.</p>
+             Cairo rainfall: methods disagree by decades and more than half the Monte Carlo
+             simulations never cross within the 80-year horizon.</p>
           <p>We detect the divergence, run a normality test on the residuals, name the
-             cause, and suppress the invalid estimates. The Monte Carlo method draws
-             directly from the observed residual distribution and makes no normality
-             assumption. When methods disagree, we route you to the one that is correct
-             for the actual noise structure of your data.</p>
+             cause, and show all estimates alongside their assumptions. When methods disagree,
+             we explain why — the record may not be able to answer when.</p>
         </div>
       </div>
 
@@ -255,7 +255,7 @@
           <h3 class="p-heading--5">The detection floor</h3>
         </div>
         <div class="col-6 col-medium-3">
-          <p>No existing climate trend tool makes this explicit: there is a minimum slope
+          <p>We are not aware of a climate trend tool that makes this explicit: there is a minimum slope
              below which the current record is too short to confirm anything. We compute
              it on every result, unconditionally, and show the ratio of the detected
              slope to the floor.</p>
@@ -340,10 +340,9 @@
         </div>
         <div class="col-6 col-medium-3">
           <p>Significant trend detected. Slope -0.021 degrees C per year over 45 years
-             (p = 0.047). A statistically confirmed cooling signal, with a step change
-             detected in 1999 (trend break test p &lt; 0.001). Floor ratio 1.6x, clearly above
-             the detection threshold. Seasonal breakdown shows the
-             strongest signal in winter (DJF, p &lt; 0.001).</p>
+             (p = 0.037, Mann-Kendall AR(1) sieve bootstrap). A statistically confirmed cooling signal.
+             Sup-F trend-break test flags 1997 (p = 0.006); Bayesian scan does not flag a break.
+             Floor ratio 1.57x, clearly above the detection threshold.</p>
           <p><a href="#analyze" class="run-example" data-location="dhaka" data-var="temperature">Run this analysis live</a></p>
         </div>
       </div>
@@ -354,12 +353,12 @@
           <h3 class="p-heading--5">Cairo, Egypt<br><span style="font-weight:400">Precipitation (POWER)</span></h3>
         </div>
         <div class="col-6 col-medium-3">
-          <p>Not yet significant (p = 0.74, NASA POWER 1981-2025). Residual skewness 1.95,
-             normality p &lt; 0.001. The analytical and Weatherhead formulas assume Gaussian
-             noise and return crossing years around 2123-2128. The Monte Carlo estimate
-             returns 2051 (85% PI 2036-2068). The methods diverge by 77 years. Tidemark
-             detects the divergence, diagnoses the cause, and directs you to the correct
-             estimate. This is the central demonstration of the four-method cross-validation.</p>
+          <p>Not yet significant (p = 0.75, NASA POWER 1981-2025). Floor ratio 0.18x.
+             Residual skewness 1.95, normality p &lt; 0.001. Analytical: 2125; Weatherhead: 2078;
+             Cramer-Rao: 2063; Monte Carlo median: beyond 2105 (51.5% of paths never cross).
+             85% interval starts 2042. Methods disagree by decades and more than half the
+             simulations never cross. The record cannot say when. This is the central
+             demonstration of the four-method cross-validation.</p>
           <p><a href="#analyze" class="run-example" data-location="cairo" data-var="temperature">Run Cairo temperature live</a></p>
         </div>
       </div>
