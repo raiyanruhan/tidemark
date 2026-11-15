@@ -1,3 +1,5 @@
+> **Historical design note. Superseded; see research/whitepaper for the current methods.**
+
 # Block Bootstrap Mann-Kendall
 
 **Source:** Önöz & Bayazit, "Block bootstrap for Mann-Kendall trend test of serially dependent

@@ -1,3 +1,5 @@
+> **Historical design note. Superseded; see research/whitepaper for the current methods.**
+
 # Bootstrap decision: iid vs block vs Gaussian
 
 ---

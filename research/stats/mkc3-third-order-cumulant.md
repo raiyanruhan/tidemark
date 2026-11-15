@@ -1,3 +1,5 @@
+> **Historical design note. Superseded; see research/whitepaper for the current methods.**
+
 # MKC3: Third-Order Cumulant Mann-Kendall Variance Correction
 
 **Source:** Then et al., "Modified Mann-Kendall with higher-order statistics for trend analysis,"

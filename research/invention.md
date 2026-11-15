@@ -1,3 +1,5 @@
+> **Historical design note. Superseded; see research/whitepaper for the current methods.**
+
 # The invention
 
 What this tool actually builds that doesn't exist anywhere else.

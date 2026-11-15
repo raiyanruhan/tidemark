@@ -1,3 +1,5 @@
+> **Historical design note. Superseded; see research/whitepaper for the current methods.**
+
 # Bayesian Changepoint Detection (NIG Marginal Likelihood)
 
 **Method:** Retrospective Normal-Inverse-Gamma marginal likelihood scan (Chib 1998).
