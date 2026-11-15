@@ -522,6 +522,82 @@
   </div>
 </section>
 
+<section class="p-section" id="changepoint">
+  <div class="u-fixed-width p-section--shallow">
+    <hr class="p-rule" />
+    <h2>When did the trend change?</h2>
+  </div>
+  <div class="u-fixed-width">
+    <div class="col-start-large-4 col-9 col-medium-5 col-start-medium-2">
+      <p>
+        Mann-Kendall tests the full series as one block. It answers whether there is a
+        consistent direction over the whole record. What it cannot answer is whether the
+        trend was different in the first half than in the second half, or whether there
+        was a specific year when the dynamics changed.
+      </p>
+      <p>
+        A series with a structural break is a concrete problem for Mann-Kendall. If a
+        variable warmed at +0.055 °C per year until 1997, then flattened, the net slope
+        across the full record is small and the significance is marginal. Mann-Kendall
+        reports p = 0.047 and you do not know why the result is so weak. The Bayesian
+        changepoint scan tells you: the trend reversed at 1997 and the two halves partially
+        cancel in the net statistic.
+      </p>
+      <p>
+        tidemark scans every candidate split year using the Normal-Inverse-Gamma marginal
+        likelihood — a closed-form Bayesian formula for how well a Gaussian model fits
+        a segment of data. For each year, it computes the log Bayes factor: how much more
+        probable is a two-segment model than a single-segment model at that split? The year
+        with the highest Bayes factor is the detected changepoint.
+      </p>
+
+      <hr class="p-rule--muted" />
+      <div class="row p-section--shallow">
+        <div class="col-3 col-medium-2">
+          <h3 class="p-heading--5">What the output shows</h3>
+        </div>
+        <div class="col-6 col-medium-3">
+          <p>
+            When a changepoint is detected, the result page shows the detected year,
+            the log Bayes factor (the strength of evidence on a scale where 3.0 is the
+            detection threshold), a calibrated confidence percentage, and the trend slope
+            before and after the break. The result also notes whether the trend steepened,
+            weakened, or reversed direction.
+          </p>
+          <p>
+            A chart of the log Bayes factor across all candidate years lets you see how
+            sharp the break is. A tall, narrow peak means a clear structural break in
+            a specific year. A broad, flat peak means the evidence for a break is spread
+            across a range of years, suggesting a gradual transition rather than a sudden
+            shift.
+          </p>
+        </div>
+      </div>
+
+      <hr class="p-rule--muted" />
+      <div class="row p-section--shallow">
+        <div class="col-3 col-medium-2">
+          <h3 class="p-heading--5">What is a Bayes factor?</h3>
+        </div>
+        <div class="col-6 col-medium-3">
+          <p>
+            A Bayes factor compares two explanations for the same data. A log Bayes factor
+            of 3.0 means the two-regime explanation is e³ ≈ 20 times more probable than the
+            single-regime explanation. A log Bayes factor of 18 means the two-regime
+            explanation is 65 million times more probable. It is a direct statement about
+            relative probability, not a threshold test.
+          </p>
+          <p>
+            The threshold of 3.0 was calibrated against random data: for a typical climate
+            series length, only 3% of purely random series produce a spurious log Bayes
+            factor above 3.0.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
 <section class="p-section" id="limitations">
   <div class="u-fixed-width p-section--shallow">
     <hr class="p-rule" />

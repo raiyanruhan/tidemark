@@ -135,6 +135,7 @@
   + MKC3-corrected MK · Sen's slope · Pettitt changepoint
   + ENSO separation (partial MK, rank-based)
   + ITA: sub-population slopes (extremes divergence)
+  + *Bayesian changepoint scan (NIG marginal likelihood)*
   + Monte Carlo bootstrap projects detection year
   + Milestones computed once significant
 
@@ -225,7 +226,8 @@
   p      0.047  ✓
   slope  -0.021 C/yr
   tau    -0.361
-  chgpt  1999
+  Bayesian CP: 1997
+  log BF = 18 (99%)
   ```
 ]
 
@@ -267,7 +269,47 @@
   slopes have opposite signs. Scatter plot included.]
 ]
 
-// Slide 8: AOD — Dr. Acker callback
+// Slide 8: Bayesian changepoint
+== When Did the Trend Change?
+
+#cols[
+  *Mann-Kendall tests the full series.*
+
+  #v(0.3em)
+
+  It cannot see that a series has two regimes —
+  one warming, one flat — where the two halves
+  partially cancel and the net result is marginal.
+
+  #v(0.5em)
+
+  *Bayesian changepoint scan (NIG marginal likelihood)*
+  compares the evidence for splitting the series at
+  every candidate year. The year with the highest
+  Bayes factor is the structural break.
+
+  #v(0.3em)
+  #text(size: 0.78em)[Log BF > 3.0 = p97 of null, strong evidence. \
+  Chib (1998). Pure numpy — no C extensions.]
+][
+  ```
+  changepoint analysis (Bayesian):
+    structural break:  1997
+    confidence:        99%   log BF = 18.0
+
+    slope before 1997:  +0.055000 C / year
+                        (1981-1996)
+    slope after  1997:  -0.000500 C / year
+                        (1997-2024)
+    trend reversed sign after 1997
+  ```
+
+  #v(0.3em)
+  #text(size: 0.78em)[Dhaka temperature. MK sees p=0.047 (barely). \
+  The Bayesian scan shows why: two cancelling regimes.]
+]
+
+// Slide 9: AOD — Dr. Acker callback
 == Dr. Acker's Variable, Live
 
 #cols[

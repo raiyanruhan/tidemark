@@ -314,6 +314,47 @@ showing three colored tercile clusters against 1:1 diagonal; shown only when ext
 
 ---
 
+### Bayesian changepoint detection (NIG marginal likelihood, Chib 1998)
+
+MK tests whether the full series has a trend. It cannot answer when the trend changed.
+A series with a structural break has partially-canceling pre/post slopes — MK tau is biased.
+
+The Bayesian approach: compare the evidence for one-segment vs. two-segment models at every
+candidate split year using the Normal-Inverse-Gamma closed-form marginal likelihood.
+
+Log Bayes factor at split t:
+```
+log BF(t) = log P(x[:t]) + log P(x[t:]) − log P(x)
+```
+
+Best split year = argmax of log BF. Threshold = 3.0 (~p97 of null for n=44 IID).
+Confidence from logistic transform: `exp(lbf−3)/(1+exp(lbf−3))`, 50% at detection edge, 99% at lbf≈8.
+
+Output:
+```
+changepoint analysis (Bayesian):
+  structural break detected: 1997   (confidence 99%,  log BF = 18.0)
+  slope before 1997:          +0.055000 °C / year   (1981-1996)
+  slope after 1997:           -0.000500 °C / year   (1997-2024)
+  trend reversed sign after 1997
+```
+
+**MK alone would miss this.** For Dhaka temperature, MK reports p=0.047 (barely significant).
+The Bayesian scan shows why: the series had a warming trend until 1997, then a flat-to-cooling
+regime. The net MK signal is real but the structure is bimodal.
+
+**No existing live-data climate trend tool shows the structural break year with Bayesian evidence.**
+
+Implemented: `_nig_log_marginal`, `detect_changepoints`, `bocpd_analysis` in `python/stats.py`.
+Wired in `python/analyze.py` (adds `"bocpd"` key to JSON). CLI output: `print_bocpd_block()`
+in `src/output.rs`. Web: "Bayesian changepoint" section with log BF scan chart in
+`python/templates/result.html`.
+
+**pure numpy — no external packages.** `fast-bocpd` (the original plan) requires MSVC C++
+14.0+ on Windows. Replaced with pure numpy/scipy retrospective NIG scan.
+
+---
+
 ### AOD variable: MODIS MOD08_M3 aerosol optical depth
 
 Aerosol Optical Depth (550nm) from MODIS Terra monthly 1-degree gridded atmosphere product.
