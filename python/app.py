@@ -556,15 +556,17 @@ def analyze_page():
     try:
         lat, lon, display = _resolve_location(form)
         alias, code, label, unit, epoch = _resolve_variable(form)
+        try:
+            start = int(form.get("start", epoch))
+            end   = int(form.get("end",   _DATA_END_YEAR))
+        except (TypeError, ValueError):
+            raise ValueError("Start and end years must be integers.")
     except ValueError as e:
         return render_template("index.html",
                                error=str(e),
                                locations=sorted(LOCATIONS.items()),
                                variables=VARIABLES,
                                data_end_year=_DATA_END_YEAR)
-
-    start = int(form.get("start", epoch))
-    end   = int(form.get("end",   _DATA_END_YEAR))
 
     try:
         result = _run_full(lat, lon, code, start, end)
@@ -595,11 +597,13 @@ def api_analyze():
     try:
         lat, lon, display = _resolve_location(request.args)
         alias, code, label, unit, epoch = _resolve_variable(request.args)
+        try:
+            start = int(request.args.get("start", epoch))
+            end   = int(request.args.get("end",   _DATA_END_YEAR))
+        except (TypeError, ValueError):
+            raise ValueError("Start and end years must be integers.")
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
-
-    start = int(request.args.get("start", epoch))
-    end   = int(request.args.get("end",   _DATA_END_YEAR))
 
     try:
         result = _run_full(lat, lon, code, start, end)
