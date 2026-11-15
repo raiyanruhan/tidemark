@@ -36,6 +36,8 @@ import uuid
 import numpy as np
 from flask import Flask, render_template, request, jsonify, Response, stream_with_context, send_file
 
+_DATA_END_YEAR = 2025
+
 from analyze   import analyse
 from fetch     import (fetch_monthly, monthly_to_annual, monthly_to_annual_min,
                        compute_compound_series, APPEEARS_PARAMS,
@@ -295,12 +297,12 @@ def generate_summary(result, display, label, unit):
     if ita:
         low_s  = ita["low_slope"]
         high_s = ita["high_slope"]
-        low_dir  = "drying" if low_s < 0 else "rising"
-        high_dir = "intensifying" if high_s > 0 else "weakening"
+        low_dir  = "falling" if low_s < 0 else "rising"
+        high_dir = "rising"  if high_s > 0 else "falling"
         sentences.append(
             f"Innovative Trend Analysis reveals the extremes are pulling apart: "
-            f"the driest years are {low_dir} ({low_s:+.4f} {unit_prose}/yr) while "
-            f"the wettest years are {high_dir} ({high_s:+.4f} {unit_prose}/yr). "
+            f"low-value years are {low_dir} ({low_s:+.4f} {unit_prose}/yr) while "
+            f"high-value years are {high_dir} ({high_s:+.4f} {unit_prose}/yr). "
             f"The standard Mann-Kendall test sees only the net signal and misses this divergence."
         )
 
@@ -332,10 +334,9 @@ def _resolve_variable(form):
 
 def _run_full(lat, lon, code, start, end, progress=None, cancel=None):
     """Fetch real data and run full analysis pipeline. No caching."""
-    # Clamp to actual data availability — no source has data outside 1981-2025.
-    # Prevents absurd ranges from hammering NASA APIs with guaranteed-empty requests.
+    # Clamp to actual data availability. Prevents absurd ranges from hammering NASA APIs.
     start = max(int(start), 1981)
-    end   = min(int(end),   2025)
+    end   = min(int(end),   _DATA_END_YEAR)
     if start >= end:
         raise ValueError("Start year must be before end year.")
 
@@ -396,11 +397,15 @@ def _run_full(lat, lon, code, start, end, progress=None, cancel=None):
             corr = analyse(corrected_vals, years, code, last_year, progress=progress, cancel=cancel)
             masking = round(corr["slope"] - result["slope"], 6)
             result["enso_correction"] = {
-                "available":     True,
-                "source":        enso_source,
-                "enso_fraction": attribution["enso_fraction"],
-                "masking_rate":  masking,
-                "corrected_vals": [round(float(v), 4) for v in corrected_vals],
+                "available":          True,
+                "source":             enso_source,
+                "enso_fraction":      attribution["enso_fraction"],
+                "masking_rate":       masking,
+                "corrected_vals":     [round(float(v), 4) for v in corrected_vals],
+                "enso_component":     attribution["enso_component"],
+                "trend_component":    attribution["trend_component"],
+                "residual_component": attribution["residual_component"],
+                "component_years":    attribution["component_years"],
                 "corrected": {
                     "slope":       corr["slope"],
                     "p_value":     corr["p_value"],
@@ -432,7 +437,7 @@ def analyze_stream():
         return Response(stream_with_context(_err()), mimetype="text/event-stream")
 
     start = int(form.get("start", epoch))
-    end   = int(form.get("end",   2025))
+    end   = int(form.get("end",   _DATA_END_YEAR))
 
     job_id = uuid.uuid4().hex
     cancel = threading.Event()
@@ -516,7 +521,8 @@ def result_page(token):
         return render_template("index.html",
                                error="Result not found or expired (links last 10 minutes).",
                                locations=sorted(LOCATIONS.items()),
-                               variables=VARIABLES)
+                               variables=VARIABLES,
+                               data_end_year=_DATA_END_YEAR)
     _, d = entry
     summary = generate_summary(d["result"], d["display"], d["label"], d["unit"])
     return render_template("result.html",
@@ -531,7 +537,8 @@ def result_page(token):
 def index():
     return render_template("index.html",
                            locations=sorted(LOCATIONS.items()),
-                           variables=VARIABLES)
+                           variables=VARIABLES,
+                           data_end_year=_DATA_END_YEAR)
 
 
 @app.route("/analyze", methods=["GET", "POST"])
@@ -539,7 +546,8 @@ def analyze_page():
     if request.method == "GET" and not request.args.get("lat") and not request.args.get("location"):
         return render_template("index.html",
                                locations=sorted(LOCATIONS.items()),
-                               variables=VARIABLES)
+                               variables=VARIABLES,
+                               data_end_year=_DATA_END_YEAR)
 
     form = request.form if request.method == "POST" else request.args
 
@@ -550,10 +558,11 @@ def analyze_page():
         return render_template("index.html",
                                error=str(e),
                                locations=sorted(LOCATIONS.items()),
-                               variables=VARIABLES)
+                               variables=VARIABLES,
+                               data_end_year=_DATA_END_YEAR)
 
     start = int(form.get("start", epoch))
-    end   = int(form.get("end",   2025))
+    end   = int(form.get("end",   _DATA_END_YEAR))
 
     try:
         result = _run_full(lat, lon, code, start, end)
@@ -561,7 +570,8 @@ def analyze_page():
         return render_template("index.html",
                                error=f"Analysis failed: {e}",
                                locations=sorted(LOCATIONS.items()),
-                               variables=VARIABLES)
+                               variables=VARIABLES,
+                               data_end_year=_DATA_END_YEAR)
 
     summary = generate_summary(result, display, label, unit)
     return render_template("result.html",
@@ -587,7 +597,7 @@ def api_analyze():
         return jsonify({"error": str(e)}), 400
 
     start = int(request.args.get("start", epoch))
-    end   = int(request.args.get("end",   2025))
+    end   = int(request.args.get("end",   _DATA_END_YEAR))
 
     try:
         result = _run_full(lat, lon, code, start, end)
