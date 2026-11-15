@@ -719,7 +719,7 @@ level $alpha$. No statistical test, however powerful, can beat it.
 For a linear trend model $Y_t = omega dot.op t + epsilon_t$ with noise density
 $f(epsilon)$ having Fisher information $I(f) = integral [f'(x)]^2 / f(x) d x$:
 
-$ n^*_CRB = n^*_Weatherhead dot.op (I(f) dot.op sigma^2)^(-1/3) $ <eq:crb>
+$ n^*_"CRB" = n^*_"Weatherhead" dot.op (I(f) dot.op sigma^2)^(-1/3) $ <eq:crb>
 
 For Gaussian noise, $I(f) = 1/sigma^2$ and the CRB equals the Weatherhead formula
 exactly. For skewed noise (precipitation, arid NDVI), Fisher information exceeds
@@ -727,7 +727,7 @@ $1/sigma^2$, so the CRB is shorter than Weatherhead --- meaning the theoretical
 limit is earlier than the parametric formula suggests.
 
 Tidemark estimates $I(hat(f))$ from the residuals using a Gaussian KDE, then
-computes $n^*_CRB$ analytically. The estimate is printed alongside the other
+computes $n^*_"CRB"$ analytically. The estimate is printed alongside the other
 three methods in every trajectory table. When the CRB agrees with Monte Carlo but
 both are shorter than Weatherhead, the noise distribution is non-Gaussian in a way
 that actually helps detection (as often happens with bounded, leptokurtic soil
@@ -846,7 +846,7 @@ $alpha_0 = 1$, $beta_0 = 1$). The NIG log marginal likelihood is [18]:
 
 $ log P(x_(1:m)) = lg Gamma(alpha_n) - lg Gamma(alpha_0)
   + alpha_0 log beta_0 - alpha_n log beta_n
-  + frac(1,2) log frac(kappa_0}{kappa_n) - frac{m}{2} log pi $ <eq:nig-lml>
+  + frac(1,2) log frac(kappa_0, kappa_n) - frac(m, 2) log pi $ <eq:nig-lml>
 
 where the posterior hyperparameters are:
 $kappa_n = kappa_0 + m$,
@@ -864,7 +864,7 @@ evidence on the Jeffreys scale ($"log BF" > "ln"(20) approx 3.0$ is "strong").
 
 The confidence at the detected year is mapped via a logistic transform:
 
-$ "confidence" = frac(e^{"log BF" - 3}}{1 + e^{"log BF" - 3}} $ <eq:bocpd-conf>
+$ "confidence" = frac(e^{"log BF" - 3}, 1 + e^{"log BF" - 3}) $ <eq:bocpd-conf>
 
 which gives 50% at the detection edge, 88% at log BF = 5, and saturates at 99% above log BF ≈ 8.
 
