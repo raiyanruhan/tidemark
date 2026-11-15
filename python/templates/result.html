@@ -274,7 +274,7 @@
             <tr>
               <td><span class="tip" data-tip="Runs 1,000 simulated futures by randomly drawing from the observed noise. The most reliable estimate when the year-to-year noise is non-Gaussian or skewed.">Monte Carlo</span></td>
               <td class="num">{{ t.mc_median or 'N/A' }}</td>
-              <td>n=1000, empirical bootstrap{% if not t.methods_agree %} — <strong>trust this</strong>{% endif %}</td>
+              <td>n=1000, AR(1) simulation with resampled innovations{% if not t.methods_agree %} — skewness-robust{% endif %}</td>
             </tr>
             <tr>
               <td><span class="tip" data-tip="The theoretical earliest any statistical test could confirm this trend, given the data's noise level. Derived from the Cramer-Rao bound in information theory. No method can beat this floor.">CRB lower bound</span></td>
@@ -489,9 +489,9 @@
       <div class="p-section" id="bocpd">
         <h2>Bayesian changepoint</h2>
         <p class="u-text--muted section-sub">
-          Retrospective NIG marginal likelihood test (Chib 1998). Finds the single split point with the highest
-          Bayes factor, where dividing the record in two is more probable than one uniform model.
-          Log BF &gt; 3 ≈ p97 of the null for series of this length.
+          Bayesian one-line-vs-two-lines scan. Finds the split point where dividing the record into
+          two segments is more probable than one uniform model, using conjugate NIG marginal likelihoods.
+          Detection threshold: log BF &gt; 3.5 and above the bootstrap null's 95th percentile.
         </p>
 
         {% if bc.log_bayes_factors %}
@@ -499,7 +499,7 @@
           <canvas id="bocpd-chart"></canvas>
         </div>
         <p style="font-size:0.8rem;color:#888;text-align:center;margin:0.5rem 0 1rem;white-space:nowrap">
-          Log Bayes factor at each candidate split year. Dashed line = detection threshold (log BF = 3).
+          Log Bayes factor at each candidate split year. Dashed line = detection threshold (log BF = 3.5).
         </p>
         {% endif %}
 
@@ -1073,7 +1073,7 @@ new Chart(document.getElementById('ts-chart'), {
   var lbf   = {{ r.bocpd.log_bayes_factors | tojson }};
   var yrs   = {{ r.annual_years | tojson }};
   var cpYr  = {{ r.bocpd.changepoint_year | tojson }};
-  var THRESH = 3.0;
+  var THRESH = 3.5;
 
   /* replace null/-Infinity sentinels with null for Chart.js spanGaps=false */
   var pts = yrs.map(function(yr, i) {
@@ -1118,7 +1118,7 @@ new Chart(document.getElementById('ts-chart'), {
           spanGaps: false,
         },
         {
-          label: 'Threshold (log BF = 3)',
+          label: 'Threshold (log BF = 3.5)',
           data: threshLine,
           borderColor: CH_RED,
           backgroundColor: 'transparent',
