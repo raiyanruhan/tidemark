@@ -3,7 +3,7 @@ fetch_laads.py - NASA LAADS DAAC MOD08_M3 monthly AOD via CMR + OPeNDAP ASCII.
 
 Product: MOD08_M3 V6.1 — MODIS Terra Monthly 1-degree gridded atmosphere product.
 Variable: Aerosol_Optical_Depth_Land_Ocean_Mean (550nm), scale=0.001, fill>32000.
-Grid: 180 lat x 360 lon at 1-degree resolution, lat_i=0 at 90S, lon_i=0 at 180W.
+Grid: 180 lat x 360 lon at 1-degree resolution, lat_i=0 at 90N (north-first), lon_i=0 at 180W.
 Coverage: 2002-present (Terra MODIS; first granule February 2000 but V6.1 monthly
           aggregates reliably start 2002).
 
@@ -23,6 +23,7 @@ Cite: Platnick, S., et al. (2015). MODIS Atmosphere L3 Monthly Product (MOD08_M3
       doi:10.5067/MODIS/MOD08_M3.061
 """
 import json
+import math
 import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -38,13 +39,13 @@ AOD_EPOCH     = 2002
 
 
 def _lat_idx(lat):
-    """1-degree grid: row 0 = 90S, row 179 = 89N."""
-    return int(lat + 90)
+    """1-degree grid, north-first: row 0 centred 89.5N, row 179 centred 89.5S."""
+    return min(179, max(0, int(math.floor(90.0 - lat))))
 
 
 def _lon_idx(lon):
-    """1-degree grid: col 0 = 180W, col 359 = 179E."""
-    return int(lon + 180)
+    """1-degree grid: col 0 centred 179.5W, col 359 centred 179.5E."""
+    return min(359, max(0, int(math.floor(lon + 180.0))))
 
 
 def _earthdata_token(username, password):
@@ -127,7 +128,7 @@ def _aod_ascii_url(opendap_url, lat_i, lon_i):
     """
     OPeNDAP DAP2 ASCII constraint for a single 1-degree pixel.
     MOD08_M3 HDF4 DDS: Aerosol_Optical_Depth_Land_Ocean_Mean[lat][lon]
-    Dimension order: lat (0=90S) x lon (0=180W).
+    Dimension order: lat (0=90N) x lon (0=180W).
     """
     constraint = f"{AOD_VAR}[{lat_i}:{lat_i}][{lon_i}:{lon_i}]"
     return f"{opendap_url}.ascii?{constraint}"
@@ -196,7 +197,7 @@ def _cache_path(lat, lon, start_year, end_year):
     cache_dir = os.path.join(os.path.expanduser("~"), ".tidemark", "cache")
     os.makedirs(cache_dir, exist_ok=True)
     return os.path.join(
-        cache_dir, f"aod_{lat:.4f}_{lon:.4f}_{start_year}_{end_year}.json"
+        cache_dir, f"aod2_{lat:.4f}_{lon:.4f}_{start_year}_{end_year}.json"
     )
 
 
