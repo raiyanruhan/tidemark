@@ -3,8 +3,8 @@ decompose.py, ENSO signal decomposition and anthropogenic trend isolation.
 
 Fetches NOAA MEI v2 (Multivariate ENSO Index, Wolter & Timlin 2011),
 regresses out ENSO variability from the climate series, and returns the
-anthropogenic component. ENSO accounts for 20-40% of interannual variance
-in tropical regions; removing it reveals the underlying forced trend.
+anthropogenic component. ENSO typically accounts for 20-40% of interannual
+(detrended) variance in tropical regions; removing it reveals the underlying forced trend.
 
 Source: NOAA Physical Sciences Laboratory
         https://psl.noaa.gov/enso/mei/
@@ -97,7 +97,9 @@ def enso_correct(vals, years, enso_annual):
     beta2 = anthropogenic trend rate (ENSO variance removed).
     Returns (corrected_vals, attribution) where:
       corrected_vals : ENSO component subtracted, anthropogenic trend intact.
-      attribution    : dict with enso_fraction, masking_rate, beta1.
+      attribution    : dict with enso_fraction (partial R^2 of ENSO given the
+                       linear trend = share of detrended variance), beta1, beta2,
+                       and additive components.
 
     Returns (None, None) if fewer than 80% of years have ENSO coverage.
     """
@@ -106,18 +108,27 @@ def enso_correct(vals, years, enso_annual):
         return None, None
 
     y = vals[idx]
-    t = np.array(idx, dtype=float)
+    t = np.array([years[i] - years[0] for i in idx], dtype=float)   # calendar years, not index
     e = np.array([enso_annual[years[i]] for i in idx])
 
     X = np.column_stack([np.ones(len(idx)), e, t])
     coeffs, _, _, _ = np.linalg.lstsq(X, y, rcond=None)
     beta0, beta1, beta2 = float(coeffs[0]), float(coeffs[1]), float(coeffs[2])
 
-    # Variance attribution: fraction of total variance explained by ENSO component
-    enso_component = beta1 * e
-    total_var = float(np.var(y, ddof=1))
-    enso_var  = float(np.var(enso_component, ddof=1))
-    enso_fraction = enso_var / total_var if total_var > 1e-12 else 0.0
+    # Variance attribution: partial R^2 of ENSO given the linear trend, i.e.
+    # the share of detrended (interannual) variance in y explained by ENSO.
+    # Frisch-Waugh: residualise y and ENSO on [1, t]; partial R^2 is the
+    # squared correlation of those residuals. Well defined when ENSO and t
+    # are correlated (unlike var(b1*e)/var(y), which ignores the covariance
+    # term and includes the trend variance in the denominator).
+    Z = np.column_stack([np.ones(len(idx)), t])
+    y_res = y - Z @ np.linalg.lstsq(Z, y, rcond=None)[0]
+    e_res = e - Z @ np.linalg.lstsq(Z, e, rcond=None)[0]
+    ss_y, ss_e = float(y_res @ y_res), float(e_res @ e_res)
+    if ss_y > 1e-12 and ss_e > 1e-12:
+        enso_fraction = float((y_res @ e_res) ** 2 / (ss_y * ss_e))
+    else:
+        enso_fraction = 0.0
 
     # Corrected series: remove ENSO component for all years
     # Years without ENSO data get beta1 * 0 (neutral ENSO assumed)

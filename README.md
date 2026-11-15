@@ -141,6 +141,8 @@ Tidemark applies the following statistical methods automatically:
 
 **Partial Mann-Kendall** (Libiseller, C. and Grimvall, A., *Environmetrics* 2002) separates the anthropogenic trend from ENSO variability using a rank-based cross-covariance framework. No parametric assumption required. Output: "trend robust to ENSO correction" / "anthropogenic trend exists, masked by ENSO" / "apparent trend may be ENSO-driven."
 
+The separate OLS ENSO correction (val = b0 + b1·ENSO + b2·t) reports `enso_fraction` as the partial R² of ENSO given the linear trend: the share of detrended (interannual) variance ENSO explains. This is distinct from the Partial Mann-Kendall `enso_fraction`, a rank-based share of concordance variance, shown as "ENSO explains N% of concordance variance".
+
 ## Data Sources
 
 **[NASA POWER](https://power.larc.nasa.gov)** - MERRA-2 reanalysis, 0.5 x 0.5 deg. Free REST API, no authentication. 1981-present.

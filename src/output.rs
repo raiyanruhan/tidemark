@@ -443,8 +443,8 @@ fn print_enso_block(enso: &serde_json::Value, unit: &str) {
 
     println!();
     println!("ENSO correction (NOAA MEI v2):");
-    println!("  {:<20}{:.1}% of variance explained by El Nino/La Nina cycles",
-        "ENSO fraction", fraction * 100.0);
+    println!("  {:<20}{:.1}% of detrended (interannual) variance explained by El Nino/La Nina (OLS partial R2)",
+        "ENSO share", fraction * 100.0);
     if masking.abs() > 1e-9 {
         let sign = if masking >= 0.0 { "+" } else { "" };
         println!("  {:<20}{}{:.5} {} / year  (ENSO was masking this from raw signal)",
