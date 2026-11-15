@@ -100,6 +100,11 @@ def analyse(vals, years, param, last_year, monthly_by_year=None, progress=None, 
 
     eprocess   = compute_eprocess(vals)
 
+    # Variance-correction variant the tool used to rely on, kept for comparison.
+    legacy = mk_verdict(vals, method="legacy")
+    comparison = {"method": legacy["method_label"], "z": legacy["z"],
+                  "p": legacy["p"], "significant": legacy["significant"]}
+
     ita_raw = ita_analysis(vals)
     ita = ita_raw if (ita_raw["low_slope"] * ita_raw["high_slope"] < 0) else None
 
@@ -130,6 +135,7 @@ def analyse(vals, years, param, last_year, monthly_by_year=None, progress=None, 
         "p_value":         p_value,
         "significant":     significant,
         "method":          method,
+        "method_comparison": comparison,
         "partial_mk":      pmk,
         "ita":             ita,
         "sigma_n":         sigma_n,

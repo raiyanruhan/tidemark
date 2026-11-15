@@ -108,7 +108,7 @@ def crb_detection_year(omega, I_fisher, sigma_n, phi, n_obs, last_year):
 
 
 def run_monte_carlo(vals, slope, intercept, residuals, z_score, last_year,
-                    collect_paths=False, progress=None, cancel=None, seed=None, pi0=None):
+                    collect_paths=False, progress=None, cancel=None, seed=None, pi0=0.0):
     """
     Simulate N_SIM futures and return when each first becomes significant.
 
@@ -118,9 +118,8 @@ def run_monte_carlo(vals, slope, intercept, residuals, z_score, last_year,
     sample_paths holds N_FAN_PATHS value traces (HORIZON long) when collect_paths.
 
     Design (each point answers a flaw in the old IID/fixed-slope version):
-      * Same test as the verdict. The variant analyse() would use for this
-        series (Hamed-Rao / MKC3 / block bootstrap, via stats.mk_verdict) sets
-        a variance inflation k = Var(S)/Var_IID(S), estimated ONCE from the
+      * Same test as the verdict. The verdict (stats.mk_verdict, AR(1) sieve
+        bootstrap) implies a variance inflation k = Var(S)/Var_IID(S) for the
         observed series (stats.mk_variance_inflation). Each step then tests
         z = (S -/+ 1) / sqrt(k * n(n-1)(2n+5)/18), S updated incrementally.
         A per-step bootstrap would be ~1e5x slower. Approximation: k is held
@@ -129,15 +128,17 @@ def run_monte_carlo(vals, slope, intercept, residuals, z_score, last_year,
         ar1_null_series); future noise continues the AR(1) process from the
         path's own last residual, innovations resampled, so autocorrelation
         and skew are kept.
-      * Slope uncertainty. Each path draws its slope as: 0 with probability
-        pi0, else b + se*t(n-2), b = observed Sen slope, se = OLS slope SE
-        inflated by sqrt((1+phi)/(1-phi)). pi0 is the Sellke-Bayarri-Berger
-        lower bound on P(no trend | p) = 1/(1 + 1/(-e p ln p)), p from
-        z_score (0.5 when p >= 1/e). Without a "no trend" mass any non-zero
-        slope draw crosses eventually, so a flat series would still "cross".
-        pi0 is a LOWER bound, so crossing times lean optimistic. Lines
-        pivot on the data mean, so a different slope changes the end level
-        consistently.
+      * Slope uncertainty. Each path draws its slope as b + se*t(n-2),
+        b = observed Sen slope, se = OLS slope SE inflated by
+        sqrt((1+phi)/(1-phi)). Lines pivot on the data mean, so a different
+        slope changes the end level consistently. This is the sampling
+        distribution of the slope, so the result is conditional on a trend of
+        about the observed size existing: draws near zero or of the opposite
+        sign never cross, but there is no extra "no trend at all" mass. (An
+        earlier version added one, set from the p-value; with p > 0.15 it
+        exceeded one half and the median was "never" even for series whose
+        true trend becomes significant in ~20 years.) pi0 can still be passed
+        explicitly to add such a mass.
       * Peeking. Testing every year and stopping at the first p<0.05 is
         optional stopping. A crossing here must PERSIST: significant in the
         trend's direction for PERSIST consecutive years; the reported year is
@@ -151,8 +152,7 @@ def run_monte_carlo(vals, slope, intercept, residuals, z_score, last_year,
     rng = np.random.default_rng(seed)
     steps = HORIZON + PERSIST - 1          # extra steps so late runs can complete
 
-    method = mk_verdict(vals)["method"]
-    k = mk_variance_inflation(vals, method, residuals)
+    k = mk_variance_inflation(mk_verdict(vals), n)
     phi, innov = ar1_fit(residuals)
 
     tbar = (n - 1) / 2.0
@@ -160,13 +160,9 @@ def run_monte_carlo(vals, slope, intercept, residuals, z_score, last_year,
     sigma = float(np.std(residuals, ddof=1))
     se = sigma / math.sqrt(sxx) * math.sqrt((1.0 + phi) / (1.0 - phi))
 
-    p_obs = float(2.0 * stats.norm.sf(abs(z_score)))
-    p_obs = min(max(p_obs, 1e-12), 1.0 / math.e)
-    if pi0 is None:
-        pi0 = 1.0 / (1.0 + 1.0 / (-math.e * p_obs * math.log(p_obs)))
-
     beta = slope + se * rng.standard_t(max(n - 2, 1), size=N_SIM)
-    beta[rng.random(N_SIM) < pi0] = 0.0
+    if pi0:
+        beta[rng.random(N_SIM) < pi0] = 0.0
     level = float(np.mean(vals))
     e = vals[-1] - (level + beta * (n - 1 - tbar))        # per-path AR(1) state
     shocks = rng.choice(innov, size=(N_SIM, steps), replace=True)
@@ -209,9 +205,8 @@ def run_monte_carlo(vals, slope, intercept, residuals, z_score, last_year,
 def compute_pvalue_series(vals, years, last_year):
     """
     Historical p-value curve from actual data slices, plus analytical projection forward.
-    historical: the SAME test as the reported verdict (stats.mk_verdict picks
-    Hamed-Rao / MKC3 / block bootstrap for the full series; that variant is
-    applied to every prefix vals[:i]), so the last point equals the reported p.
+    historical: the SAME test as the reported verdict (stats.mk_verdict)
+    applied to every prefix vals[:i], so the last point equals the reported p.
     projected: z(n) = z0 * (n/n0)^(3/2), p from normal CDF, forward 60 years.
     Projected series only included if current p > 0.05.
     """
@@ -224,7 +219,7 @@ def compute_pvalue_series(vals, years, last_year):
     historical_pvals = []
     for i in range(start, n):
         historical_years.append(years[i - 1])
-        historical_pvals.append(float(mk_verdict(vals[:i], method=full["method"])["p"]))
+        historical_pvals.append(float(mk_verdict(vals[:i])["p"]))
     historical_years.append(years[n - 1])
     historical_pvals.append(float(full["p"]))
 

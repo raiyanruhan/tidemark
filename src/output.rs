@@ -18,7 +18,7 @@ pub fn print_result(config: &Config, json: &serde_json::Value) {
     println!("{:<12}{} ({}, {})", "variable", config.var_label, config.param, config.unit);
     println!("{:<12}{} - {}  ({} years)", "period", start_year, end_year, n_years);
     let method = json["method"].as_str()
-        .unwrap_or("Modified Mann-Kendall (Hamed-Rao, lag=3)");
+        .unwrap_or("Mann-Kendall, AR(1) sieve bootstrap");
     println!("{:<12}{}", "test", method);
 
     println!();

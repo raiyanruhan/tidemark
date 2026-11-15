@@ -138,7 +138,7 @@
               </tr>
               {% if r.method %}
               <tr>
-                <td><span class="tip" data-tip="MKC3 (Then et al. 2025) corrects for third-order cumulants in skewed residuals (|skewness| > 0.5), reducing false positives in precipitation, NDVI and ET data. For near-Gaussian series, Hamed-Rao is used.">Test method</span></td>
+                <td><span class="tip" data-tip="Mann-Kendall test whose null distribution is bootstrapped from this series: the trend line is removed, an AR(1) model is fitted to what is left, and trend-free series are rebuilt from it. This accounts for year-to-year persistence and skew in the data.">Test method</span></td>
                 <td class="num" style="font-size:0.85em">{{ r.method }}</td>
               </tr>
               {% endif %}

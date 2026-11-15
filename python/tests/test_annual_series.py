@@ -64,7 +64,7 @@ def naive_series(mon, min_months):
 def sen_per_year(annual):
     years = np.array([y for y, _ in annual], dtype=float)
     vals = np.array([v for _, v in annual], dtype=float)
-    return mk_verdict(vals, method="hr")["slope"], years
+    return mk_verdict(vals)["slope"], years
 
 
 def old_slope(annual):

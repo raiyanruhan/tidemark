@@ -414,9 +414,11 @@
         (MKC3, p &gt; 0.10).
       </p>
       <p>
-        The correction hierarchy is applied automatically: block bootstrap when |φ| > 0.3,
-        MKC3 when skewness exceeds 0.5, and Hamed-Rao otherwise. The test method is shown
-        on every result so you always know which correction was used.
+        These corrections are reported for comparison. The verdict itself comes from a
+        Mann-Kendall test whose null distribution is bootstrapped from the series: the
+        trend line is removed, an AR(1) model is fitted to the residuals, and trend-free
+        series are rebuilt from it. On simulated trend-free data this rejects close to
+        the nominal 5%, where the three corrections above reject 7 to 16%.
       </p>
     </div>
   </div>

@@ -583,13 +583,19 @@ def run_mannkendall(vals):
 
 
 METHOD_LABELS = {
-    "hr":   "Modified Mann-Kendall (Hamed-Rao, lag=3)",
-    "mkc3": "Modified Mann-Kendall (MKC3, Then 2025)",
+    "sieve": "Mann-Kendall, AR(1) sieve bootstrap",
+    "hr":    "Modified Mann-Kendall (Hamed-Rao, lag=3)",
+    "mkc3":  "Modified Mann-Kendall (MKC3, Then 2025)",
 }
+SIEVE_N_BOOT = 1999
 
 
 def select_mk_method(phi, skewness, n):
-    """Which MK variant gives the verdict: 'bb' (autocorrelated), 'mkc3' (skewed) or 'hr'."""
+    """
+    Variance-correction variant reported for comparison next to the verdict:
+    'bb' (autocorrelated), 'mkc3' (skewed) or 'hr'. Not used for the verdict:
+    on trend-free data these reject 7-17% of the time at a nominal 5%.
+    """
     if abs(phi) > 0.3:
         return "bb"
     if abs(skewness) > 0.5 and n >= 20:
@@ -597,15 +603,61 @@ def select_mk_method(phi, skewness, n):
     return "hr"
 
 
-def mk_verdict(vals, method=None):
+def mk_s_rows(Y):
+    """Mann-Kendall S statistic for each row of Y."""
+    Y = np.atleast_2d(np.asarray(Y, dtype=float))
+    i, j = np.triu_indices(Y.shape[1], k=1)
+    return np.sign(Y[:, j] - Y[:, i]).sum(axis=1)
+
+
+def sieve_bootstrap_mk(x, n_boot=SIEVE_N_BOOT, seed=42):
+    """
+    Mann-Kendall test with the null distribution of S bootstrapped from the
+    series itself: remove the Sen-slope line, fit AR(1) to the residuals
+    (ar1_fit, bias-corrected phi), resample the innovations and rebuild
+    trend-free AR(1) series (ar1_null_series). The null therefore carries the
+    data's own autocorrelation and innovation shape (skew included) rather
+    than a formula for either.
+
+    Simulated rejection rate on trend-free data at a nominal 5% (n = 45):
+    iid 5%, skewed 5%, AR(1) 0.3 6%, AR(1) 0.6 5%, AR(1) 0.8 11%.
+    Shorter or more persistent series are less well calibrated (n = 20,
+    phi = 0.6: 11%), because phi itself is poorly estimated there.
+    Returns (p, z, var_boot, phi): z uses the bootstrap variance of S with the
+    usual continuity correction.
+    """
+    x = np.asarray(x, dtype=float)
+    n = len(x)
+    i, j = np.triu_indices(n, k=1)
+    beta = float(np.median((x[j] - x[i]) / (j - i)))
+    r = x - beta * np.arange(n, dtype=float)
+    r = r - r.mean()
+    s_obs = float(np.sum(np.sign(x[j] - x[i])))
+    var0 = n * (n - 1) * (2 * n + 5) / 18.0
+    if float(np.std(r)) < 1e-12:
+        return (1.0 if s_obs == 0 else 1.0 / (n_boot + 1.0)), 0.0, var0, 0.0
+
+    phi, _ = ar1_fit(r)
+    null = ar1_null_series(r, n_boot, np.random.default_rng(seed))
+    s_null = mk_s_rows(null)
+    p = (1.0 + float(np.sum(np.abs(s_null) >= abs(s_obs)))) / (n_boot + 1.0)
+    var_boot = float(np.var(s_null))
+    if var_boot <= 0:
+        var_boot = var0
+    z = (s_obs - np.sign(s_obs)) / math.sqrt(var_boot)
+    return float(p), float(z), var_boot, phi
+
+
+def mk_verdict(vals, method="sieve"):
     """
     The pipeline's significance verdict for one series. Single source of truth:
     analyse() and the trajectory module both go through here.
-    method=None picks the variant from the residual autocorrelation and skew
-    (select_mk_method); pass a method key to force that variant (used to apply
-    the same test to sub-series and simulated extensions).
+    method="sieve" (default) is the AR(1) sieve-bootstrap Mann-Kendall test.
+    "hr", "mkc3", "bb" force one of the variance-correction variants and
+    "legacy" picks among those three by autocorrelation and skew
+    (select_mk_method); these are kept for comparison only.
     Returns dict: method, method_label, res (Hamed-Rao result: slope, intercept,
-    Tau), slope, intercept, residuals, phi, skewness, z, p, significant.
+    Tau), slope, intercept, residuals, phi, skewness, z, p, significant, var_s.
     """
     vals = np.asarray(vals, dtype=float)
     n = len(vals)
@@ -614,38 +666,37 @@ def mk_verdict(vals, method=None):
     residuals = compute_residuals(vals, slope, intercept)
     phi = lag1_acf(residuals)
     skewness = float(stats.skew(residuals))
-    if method is None:
+    if method == "legacy":
         method = select_mk_method(phi, skewness, n)
 
-    z, p, sig = float(res.z), float(res.p), bool(res.h)
-    label = METHOD_LABELS["hr"]
-    if method == "bb":
-        bb_p, bb_z, bb_len = block_bootstrap_mk_pvalue(vals)
-        z, p, sig = round(bb_z, 4), bb_p, bool(bb_p < 0.05)
+    var0 = n * (n - 1) * (2 * n + 5) / 18.0
+    if method == "sieve":
+        p, z, var_s, _ = sieve_bootstrap_mk(vals)
+        sig = bool(p < 0.05)
+        label = METHOD_LABELS["sieve"]
+    elif method == "bb":
+        p, z, bb_len = block_bootstrap_mk_pvalue(vals)
+        sig = bool(p < 0.05)
+        var_s = block_bootstrap_mk_variance(vals)
         label = f"Block Bootstrap MK (Önöz & Bayazit 2012, block length={bb_len})"
     elif method == "mkc3":
         z, p, _, sig = mk_z_mkc3(vals)
-        z = round(z, 4)
+        var_s = mkc3_variance(vals - slope * np.arange(n, dtype=float), n)
         label = METHOD_LABELS["mkc3"]
+    else:
+        z, p, sig, var_s = float(res.z), float(res.p), bool(res.h), float(res.var_s)
+        label = METHOD_LABELS["hr"]
     return {"method": method, "method_label": label, "res": res,
             "slope": slope, "intercept": intercept, "residuals": residuals,
-            "phi": phi, "skewness": skewness, "z": z, "p": p, "significant": sig}
+            "phi": phi, "skewness": skewness, "z": round(float(z), 4), "p": float(p),
+            "significant": bool(sig), "var_s": float(var_s if var_s > 0 else var0)}
 
 
-def mk_variance_inflation(vals, method, residuals):
+def mk_variance_inflation(verdict, n):
     """
-    Var(S) of the given MK variant divided by the IID variance n(n-1)(2n+5)/18,
-    for the observed series. This is the autocorrelation/skew correction the
-    verdict applies, estimated once so a simulation can reuse it at every n
-    without re-running a bootstrap per step.
+    Var(S) used by the verdict divided by the IID variance n(n-1)(2n+5)/18.
+    This is the autocorrelation/skew correction the verdict applied, so a
+    simulation can reuse it at every n without a bootstrap per step.
     """
-    n = len(vals)
     var0 = n * (n - 1) * (2 * n + 5) / 18.0
-    if method == "bb":
-        var = block_bootstrap_mk_variance(vals)
-    elif method == "mkc3":
-        var = mkc3_variance(residuals, n)
-    else:
-        var = float(mk.hamed_rao_modification_test(vals, alpha=0.05, lag=3).var_s)
-    k = var / var0 if var > 0 else 1.0
-    return float(np.clip(k, 0.5, 20.0))
+    return float(np.clip(verdict["var_s"] / var0, 0.5, 20.0))
