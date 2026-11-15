@@ -244,7 +244,7 @@
       {% set t = r.trajectory %}
       <div class="p-section" id="trajectory">
         <h2>Significance trajectory</h2>
-        <p class="u-text--muted section-sub">When will the evidence become conclusive? Four independent methods give estimates, each making different assumptions about the noise distribution.</p>
+        <p class="u-text--muted section-sub">When will the evidence become conclusive? Five independent methods give estimates, each making different assumptions about the noise distribution.</p>
         <table>
           <thead>
             <tr>
@@ -264,6 +264,13 @@
               <td class="num">{{ t.weatherhead_year or 'N/A' }}</td>
               <td>OLS detection time, phi = {{ '%.2f' | format(t.weatherhead_phi) }}{% if not t.methods_agree %}, assumes Gaussian{% endif %}</td>
             </tr>
+            {% if t.utdt_year %}
+            <tr>
+              <td><span class="tip" data-tip="Extends Weatherhead (1998) to include the instrument's own calibration uncertainty from NASA MERRA-2 validation papers. σ_total = sqrt(σ_climate² + σ_instrument²). No existing climate tool does this.">Weatherhead uTDT</span></td>
+              <td class="num">{{ t.utdt_year }}</td>
+              <td>σ_total = {{ t.utdt_sigma_total }}, includes MERRA-2 calibration ±{{ t.utdt_sigma_cal }}</td>
+            </tr>
+            {% endif %}
             <tr>
               <td><span class="tip" data-tip="Runs 1,000 simulated futures by randomly drawing from the observed noise. The most reliable estimate when the year-to-year noise is non-Gaussian or skewed.">Monte Carlo</span></td>
               <td class="num">{{ t.mc_median or 'N/A' }}</td>

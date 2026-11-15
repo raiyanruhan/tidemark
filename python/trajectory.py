@@ -17,6 +17,49 @@ N_SIM       = 1000
 HORIZON     = 80
 N_FAN_PATHS = 200   # MC paths retained for visualization fan
 
+# NASA instrument 1-sigma calibration uncertainties (native variable units).
+# Sources: MERRA-2 validation (Rienecker 2011, Bosilovich 2015), MODIS product docs.
+# PRECTOTCORR is dimensionless fraction of sigma_N (multiplicative).
+INSTRUMENT_UNCERTAINTY = {
+    "T2M":         0.20,
+    "T2M_MAX":     0.25,
+    "T2M_MIN":     0.25,
+    "RH2M":        3.0,
+    "EVLAND":      0.015,
+    "WS10M":       0.35,
+    "VPD":         0.05,
+    "DTR":         0.30,
+    "GWETROOT":    0.04,
+    "GWETTOP":     0.04,
+    "GWETPROF":    0.04,
+    "TSOIL1":      0.25,
+    "TS":          0.15,
+    "FROST_DAYS":  0.5,
+    "PRECTOTCORR": 0.15,
+    "NDVI":        0.03,
+    "LST":         1.0,
+    "ET_MOD16":    0.25,
+}
+
+
+def uTDT_detection_year(omega, sigma_n, phi, n_obs, last_year, param_code):
+    """
+    Weatherhead uTDT: detection year with NASA instrument calibration uncertainty.
+    sigma_total = sqrt(sigma_N^2 + sigma_cal^2).
+    Returns (utdt_year, sigma_total, sigma_cal); utdt_year=None when omega~0.
+    """
+    sigma_cal = INSTRUMENT_UNCERTAINTY.get(param_code or "", 0.0)
+    if param_code == "PRECTOTCORR":
+        sigma_cal = sigma_cal * sigma_n
+    sigma_total = math.sqrt(sigma_n ** 2 + sigma_cal ** 2)
+    if abs(omega) < 1e-12:
+        return None, sigma_total, sigma_cal
+    phi_c   = max(-0.99, min(0.99, phi))
+    n_star  = (3.3 * sigma_total / abs(omega)) ** (2.0 / 3.0) \
+              * ((1.0 + phi_c) / (1.0 - phi_c)) ** (1.0 / 3.0)
+    year    = last_year + max(0, int(math.ceil(n_star - n_obs)))
+    return year, round(sigma_total, 4), round(sigma_cal, 4)
+
 
 def analytical_crossing_year(z0, n0, last_year):
     """
@@ -142,12 +185,17 @@ def compute_pvalue_series(vals, years, last_year):
 
 
 def compute_trajectory(vals, slope, intercept, residuals, z_score,
-                       sigma_n, phi, n, last_year, eff, progress=None, cancel=None):
+                       sigma_n, phi, n, last_year, eff, param_code=None,
+                       progress=None, cancel=None):
     """
-    Assemble all four trajectory estimates into a single result dict.
+    Assemble all five trajectory estimates into a single result dict.
     Call only when trend is NOT yet significant.
     """
     analytical_year = analytical_crossing_year(z_score, n, last_year)
+
+    utdt_year, utdt_sigma_total, utdt_sigma_cal = uTDT_detection_year(
+        slope, sigma_n, phi, n, last_year, param_code
+    )
 
     w_years = weatherhead_detection_years(sigma_n, slope, phi)
     if math.isinf(w_years):
@@ -196,6 +244,9 @@ def compute_trajectory(vals, slope, intercept, residuals, z_score,
     return {
         "analytical_year":    analytical_year,
         "weatherhead_year":   weatherhead_year,
+        "utdt_year":          utdt_year,
+        "utdt_sigma_total":   utdt_sigma_total,
+        "utdt_sigma_cal":     utdt_sigma_cal,
         "weatherhead_phi":    round(phi, 4),
         "mc_median":          mc_median,
         "mc_pi_low":          mc_pi_low,

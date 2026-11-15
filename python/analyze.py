@@ -168,7 +168,8 @@ def analyse(vals, years, param, last_year, monthly_by_year=None, progress=None, 
         emit("running Monte Carlo simulation (1000 paths)...")
         result["trajectory"] = compute_trajectory(
             vals, slope, intercept, residuals, z_score,
-            sigma_n, phi, n, last_year, eff, progress=progress, cancel=cancel,
+            sigma_n, phi, n, last_year, eff, param_code=param,
+            progress=progress, cancel=cancel,
         )
 
     emit("computing p-value trajectory...")

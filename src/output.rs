@@ -304,8 +304,11 @@ fn print_milestones(json: &serde_json::Value) {
 fn print_trajectory(json: &serde_json::Value) {
     let traj = &json["trajectory"];
 
-    let analytical   = traj["analytical_year"].as_i64();
-    let weatherhead  = traj["weatherhead_year"].as_i64();
+    let analytical        = traj["analytical_year"].as_i64();
+    let weatherhead       = traj["weatherhead_year"].as_i64();
+    let utdt_year         = traj["utdt_year"].as_i64();
+    let utdt_sigma_total  = traj["utdt_sigma_total"].as_f64();
+    let utdt_sigma_cal    = traj["utdt_sigma_cal"].as_f64();
     let mc_median    = traj["mc_median"].as_i64();
     let mc_pi_low    = traj["mc_pi_low"].as_i64();
     let mc_pi_high   = traj["mc_pi_high"].as_i64();
@@ -320,10 +323,18 @@ fn print_trajectory(json: &serde_json::Value) {
 
     println!("significance trajectory:");
 
+    let utdt_note = match (utdt_sigma_total, utdt_sigma_cal) {
+        (Some(st), Some(sc)) => format!("σ_total={:.3}, MERRA-2 calibration ±{:.3}", st, sc),
+        _ => String::new(),
+    };
+
     if methods_agree {
         print_traj_row("analytical MK", analytical, "MK n^1.5 growth formula");
         print_traj_row("Weatherhead 1998", weatherhead,
             &format!("OLS formula with MK parameters, ~90% detection probability, phi={:.2}", phi));
+        if utdt_year.is_some() {
+            print_traj_row("Weatherhead uTDT", utdt_year, &utdt_note);
+        }
         print_traj_row("Monte Carlo", mc_median, "n=1000, empirical bootstrap");
         print_traj_row("CRB lower bound", crb_year, "Fisher information floor, any test");
         println!("  methods agree, consistent estimate");
@@ -331,6 +342,9 @@ fn print_trajectory(json: &serde_json::Value) {
         print_traj_row("analytical MK", analytical, "assumes Gaussian IID, invalid here");
         print_traj_row("Weatherhead 1998", weatherhead,
             "OLS formula with MK parameters, assumes Gaussian, also invalid");
+        if utdt_year.is_some() {
+            print_traj_row("Weatherhead uTDT", utdt_year, &utdt_note);
+        }
         print_traj_row("Monte Carlo", mc_median, "n=1000, empirical bootstrap, correct");
         print_traj_row("CRB lower bound", crb_year, "Fisher information floor, any test");
         println!("  methods diverge: {} years", divergence);
