@@ -75,21 +75,6 @@ significance trajectory:
 
 The 77-year divergence between methods is a diagnostic. Cairo residuals are right-skewed. The standard formulas assume bell-curve noise and return a confident wrong answer. Tidemark detects this automatically and routes to the correct estimate. For precipitation and other skewed variables, Tidemark applies the MKC3 variance correction (Then et al. 2025) instead of Hamed-Rao, eliminating the false-positive bias that inflated that p-value in the first place.
 
-### Earth System Scan
-
-The `scan` subcommand runs all variables for a location in one command and produces a system fingerprint.
-
-```
-$ tidemark scan --location dhaka
-
-variable          direction   slope           p-value    significance
-temperature       downward    -0.021 C/yr     0.047      significant
-evaporation       rising      +0.008 mm/d/yr  0.041      significant
-humidity          falling     -0.11 %/yr      0.112      ~2031 (MC: 2029-2034)
-wind              falling     -0.002 m/s/yr   0.33       ~2039
-precipitation     downward    -0.016 mm/d/yr  0.385      ~2037 (GPM 2001-2025, 0.23x floor)
-```
-
 ## Build
 
 ```
@@ -105,7 +90,6 @@ Requires Python 3.10+ and Rust 1.70+. Temperature, humidity, wind, and soil vari
 tidemark analyze --location <name> --var <variable>
 tidemark analyze --lat <lat> --lon <lon> --var <variable>
 tidemark analyze --location <name> --var <variable> --years <n>
-tidemark scan --location <name>
 tidemark compare --location <name> --location <name> --var <variable>
 ```
 
