@@ -423,13 +423,19 @@ def analyze_stream():
     try:
         lat, lon, display = _resolve_location(form)
         alias, code, label, unit, epoch = _resolve_variable(form)
+        try:
+            start = int(form.get("start", epoch))
+            end   = int(form.get("end",   _DATA_END_YEAR))
+        except (TypeError, ValueError):
+            raise ValueError("Start and end years must be integers.")
     except ValueError as e:
+        msg = str(e)  # capture before Python 3 deletes `e` on except-block exit
         def _err():
-            yield f"data: {json.dumps({'type': 'error', 'msg': str(e)})}\n\n"
-        return Response(stream_with_context(_err()), mimetype="text/event-stream")
-
-    start = int(form.get("start", epoch))
-    end   = int(form.get("end",   _DATA_END_YEAR))
+            yield f"data: {json.dumps({'type': 'error', 'msg': msg})}\n\n"
+        resp = Response(stream_with_context(_err()), mimetype="text/event-stream")
+        resp.headers["Cache-Control"]     = "no-cache"
+        resp.headers["X-Accel-Buffering"] = "no"
+        return resp
 
     job_id = uuid.uuid4().hex
     cancel = threading.Event()

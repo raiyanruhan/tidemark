@@ -647,7 +647,9 @@
     };
 
     src.onerror = function () {
-      if (src.readyState !== EventSource.CLOSED) {
+      // CONNECTING (0) = mid-stream reconnect attempt — wait for it.
+      // CLOSED (2) = initial failure (e.g. 500) or final close — reset form.
+      if (src.readyState !== EventSource.CONNECTING) {
         currentSrc   = null;
         currentJobId = null;
         src.close();
