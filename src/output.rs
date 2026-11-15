@@ -378,9 +378,11 @@ fn print_bocpd_block(bocpd: &serde_json::Value, start_year: u64, end_year: u64, 
     let slope_pre = match bocpd["slope_before"].as_f64() { Some(v) => v, None => return };
     let slope_pst = match bocpd["slope_after"].as_f64()  { Some(v) => v, None => return };
 
+    let log_bf = bocpd["changepoint_log_bf"].as_f64().unwrap_or(0.0);
     println!();
-    println!("changepoint analysis (BOCPD):");
-    println!("  structural break detected: {}   (confidence {:.0}%)", cp_year, conf * 100.0);
+    println!("changepoint analysis (Bayesian):");
+    println!("  structural break detected: {}   (confidence {:.0}%,  log BF = {:.1})",
+        cp_year, conf * 100.0, log_bf);
     println!("  {:<20}{} {} / year   ({}-{})",
         format!("slope before {}:", cp_year),
         fmt_slope(slope_pre), unit,
