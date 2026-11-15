@@ -126,28 +126,28 @@
 // ============================================================
 
 #page(numbering: none, header: none)[
-  #v(3.5cm)
+  #v(2.0cm)
   #align(center)[
     #text(size: 19pt, weight: "bold", fill: navy, font: "Ubuntu Sans")[
       Earth system trend detection
     ]
-    #v(0.8em)
+    #v(0.6em)
     #text(size: 12pt, weight: "light", fill: charcoal, font: "Ubuntu Sans")[
       How to determine when a climate variable will reach statistical significance, \
       from Mann-Kendall analysis to Monte Carlo projection
     ]
-    #v(1.6em)
+    #v(1.0em)
     #text(size: 10pt, font: "Ubuntu Sans")[Raiyan Bin Rashid, Jotirmoy Bhowmik, Zunaeid Siddique, Nahin Rahman]
     #v(0.3em)
     #text(size: 9.5pt, fill: gray-6, font: "Ubuntu Sans")[November 2026]
   ]
 
-  #v(1.8cm)
+  #v(1.0cm)
   #line(length: 100%, stroke: 0.5pt + charcoal)
-  #v(1cm)
+  #v(0.7cm)
 
   #text(size: 10pt, weight: "bold", font: "Ubuntu Sans")[Abstract]
-  #v(0.55em)
+  #v(0.4em)
   #text(size: 10pt)[
     We present Tidemark, a command-line Earth system trend analysis tool built on six
     novel contributions. The first is the *significance trajectory*: a probabilistic,
@@ -184,7 +184,7 @@
     precipitation and remote sensing data), and is freely reproducible from open NASA
     data with no installation beyond standard Python packages.
   ]
-  #v(0.5em)
+  #v(0.3em)
   #text(size: 9pt, fill: gray-6)[
     *Keywords:* Mann-Kendall, trend detection, significance trajectory, detection floor,
     Monte Carlo, Sen's slope, Bayesian changepoint, NIG marginal likelihood, NASA POWER,
