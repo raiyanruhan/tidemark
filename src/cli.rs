@@ -373,5 +373,42 @@ fn current_year() -> u32 {
         .duration_since(UNIX_EPOCH)
         .unwrap_or_default()
         .as_secs();
-    (1970 + secs / 31_557_600) as u32
+    year_from_unix_secs(secs)
+}
+
+/// Gregorian calendar year (UTC) for a Unix timestamp.
+/// Howard Hinnant's civil_from_days, year component only.
+fn year_from_unix_secs(secs: u64) -> u32 {
+    let z = (secs / 86_400) as i64 + 719_468; // days since 0000-03-01
+    let era = z.div_euclid(146_097);
+    let doe = z.rem_euclid(146_097); // [0, 146096]
+    let yoe = (doe - doe / 1_460 + doe / 36_524 - doe / 146_096) / 365; // [0, 399]
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100); // [0, 365], March-based
+    let mp = (5 * doy + 2) / 153; // [0, 11], 0 = March
+    let year = yoe + era * 400 + if mp >= 10 { 1 } else { 0 };
+    year as u32
+}
+
+#[cfg(test)]
+mod year_tests {
+    use super::year_from_unix_secs;
+
+    #[test]
+    fn calendar_year_boundaries() {
+        // 2027-01-01T00:00:00Z = 1_798_761_600; old formula gave 2026 for first 6h.
+        assert_eq!(year_from_unix_secs(1_798_761_600 - 1), 2026);
+        assert_eq!(year_from_unix_secs(1_798_761_600), 2027);
+        assert_eq!(year_from_unix_secs(1_798_761_600 + 3 * 3600), 2027);
+        // 2028-01-01T00:00:00Z = 1_830_297_600; old formula gave 2027 for first 12h.
+        assert_eq!(year_from_unix_secs(1_830_297_600 - 1), 2027);
+        assert_eq!(year_from_unix_secs(1_830_297_600), 2028);
+        assert_eq!(year_from_unix_secs(1_830_297_600 + 6 * 3600), 2028);
+        // 2029-01-01T00:00:00Z = 1_861_920_000; old formula gave 2029 for last 6h of 2028.
+        assert_eq!(year_from_unix_secs(1_861_920_000 - 3 * 3600), 2028);
+        assert_eq!(year_from_unix_secs(1_861_920_000 - 1), 2028);
+        assert_eq!(year_from_unix_secs(1_861_920_000), 2029);
+        // sanity: epoch and leap day
+        assert_eq!(year_from_unix_secs(0), 1970);
+        assert_eq!(year_from_unix_secs(951_782_400), 2000); // 2000-02-29
+    }
 }
