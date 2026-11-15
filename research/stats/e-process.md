@@ -1,4 +1,10 @@
-# E-process: sequential evidence accumulation (anytime-validity under investigation)
+# E-process: sequential evidence accumulation
+
+> **Update 2026-11-15.** The "Option B" Gaussian score process below (and the old AREP formula
+> `exp(omega*Lambda_n - omega^2*I*n^3/6)`) is **not** a valid e-process: omega is fitted on the
+> same data. It was replaced by an invariant mixture Bayes factor with intercept and scale
+> integrated out; see arep.md for the construction, validity argument and simulations.
+> Anytime-validity holds there for iid Gaussian noise only.
 
 Sources:
 - Ramdas & Wang 2023 review (sas.uwaterloo.ca/~wang/files/e-review.pdf)

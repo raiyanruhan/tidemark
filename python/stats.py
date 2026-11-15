@@ -68,74 +68,104 @@ def compute_efficiency_metrics(residuals):
     }
 
 
-def compute_arep(vals, residuals, slope, phi, efficiency):
+# Prior on the standardised slope delta = beta / sigma (per annual step).
+# Scale mixture of three zero-mean normals; fixed in advance, never fitted to
+# the series being tested. 24-point Gauss-Hermite per component.
+_EP_TAUS = (0.02, 0.05, 0.15)
+_EP_X, _EP_W = np.polynomial.hermite.hermgauss(24)
+_EP_DELTA = np.concatenate([t * math.sqrt(2.0) * _EP_X for t in _EP_TAUS])
+_EP_LOGW = np.concatenate(
+    [np.log(_EP_W / math.sqrt(math.pi)) - math.log(len(_EP_TAUS)) for _ in _EP_TAUS])
+EP_THRESHOLD = 20.0
+
+
+def _logsumexp(a, axis=None):
+    m = np.max(a, axis=axis, keepdims=True)
+    out = np.log(np.sum(np.exp(a - m), axis=axis, keepdims=True)) + m
+    return out if axis is None else np.squeeze(out, axis=axis)
+
+
+def _ep_ar1_phi(y):
+    """Lag-1 coefficient of OLS-line residuals, small-sample corrected, in [0, 0.9]."""
+    n = len(y)
+    t = np.arange(n, dtype=float)
+    r = y - np.polyval(np.polyfit(t, y, 1), t)
+    d = float(np.dot(r[:-1], r[:-1]))
+    if d <= 0.0:
+        return 0.0
+    p = float(np.dot(r[:-1], r[1:])) / d
+    p += (1.0 + 4.0 * p) / n
+    return float(np.clip(p, 0.0, 0.9))
+
+
+def log_bayes_factor_trend(y, phi=0.0):
     """
-    AREP e-process (Option B: Gaussian score process, valid n > 30).
-    E_n = exp(omega * Lambda_n - omega^2 * I * n^3/6 * (1+phi)/(1-phi))
-    See research/stats/arep.md.
+    log E_n for H0: no linear trend vs H1: slope beta = delta*sigma, delta ~ prior above.
 
-    Score function is estimated from residuals (shape of f), but evaluated at
-    centered_vals = slope*t + residuals (keeps trend signal for E[Lambda_n|H1] > 0).
-    Evaluating at residuals alone gives E[Lambda_n] ≈ 0 under both hypotheses.
+    Intercept and noise scale are nuisance parameters shared by both
+    hypotheses and are integrated out with the right-Haar priors
+    (flat on intercept, 1/sigma on scale). The result is the likelihood ratio of
+    the maximal invariant under y -> a + s*y, so E[E_n | H0] = 1 exactly for
+    iid Gaussian errors, and E_n is a martingale in the invariant filtration
+    (Wijsman 1967; Perez-Ortiz et al. 2024). With phi != 0 the series, the
+    intercept column and the time column are Prais-Winsten whitened first; that
+    step treats the estimated phi as known and is approximate.
     """
-    n = len(residuals)
-    if n < 20 or efficiency is None:
+    y = np.asarray(y, dtype=float)
+    n = len(y)
+    t = np.arange(n, dtype=float)
+    one = np.ones(n)
+    if phi != 0.0:
+        def white(x):
+            z = np.empty(n)
+            z[0] = math.sqrt(1.0 - phi * phi) * x[0]
+            z[1:] = x[1:] - phi * x[:-1]
+            return z
+        y, t, one = white(y), white(t), white(one)
+    o = one / np.linalg.norm(one)
+    y0 = y - o * (o @ y)          # intercept projected out
+    x0 = t - o * (o @ t)          # centred (whitened) time
+    S0 = float(y0 @ y0)
+    Sxx = float(x0 @ x0)
+    if S0 <= 0.0 or Sxx <= 0.0:
+        return 0.0
+    r = float(x0 @ y0) / math.sqrt(S0 * Sxx)
+    c = _EP_DELTA * math.sqrt(Sxx) * r
+    v = np.linspace(1e-6, math.sqrt(n) + 12.0 + float(np.abs(c).max()), 1500)
+    lv = (n - 2) * np.log(v) - v * v / 2.0
+    l_alt = (_logsumexp(lv[None, :] + c[:, None] * v[None, :], axis=1)
+             - _logsumexp(lv) - _EP_DELTA ** 2 * Sxx / 2.0)
+    return float(_logsumexp(_EP_LOGW + l_alt))
+
+
+def compute_eprocess(vals):
+    """
+    Mixture e-variable for "no linear trend" (research/stats/arep.md).
+
+    E_n = integral over the slope prior of the likelihood ratio, with intercept
+    and noise scale integrated out (log_bayes_factor_trend). Nothing is fitted
+    to the series being tested apart from phi, so the omega-fitted-on-the-same-data
+    flaw of the old statistic is gone.
+
+    Guarantees: for iid Gaussian errors, E[E_n | H0] = 1, so P(E_n >= 20) <= 5%
+    at any fixed n, and by Ville's inequality on the invariant filtration the
+    same bound holds uniformly over n. Autocorrelation: phi is estimated and the
+    series Prais-Winsten whitened; this is approximate (no exact guarantee) and
+    was checked only by simulation. Non-Gaussian errors: no guarantee, simulated.
+    """
+    y = np.asarray(vals, dtype=float)
+    n = len(y)
+    if n < 15 or not np.all(np.isfinite(y)):
         return None
-    omega = slope
-    I_hat = efficiency["I_fisher"]
-    try:
-        kde = stats.gaussian_kde(residuals, bw_method='silverman')
-    except Exception:
-        return None
-
-    # centered[i] = slope*i + residuals[i] = vals[i] - intercept
-    # KDE score estimated from residuals (shape of f), applied at centered_vals.
-    # Gaussian fallback outside KDE support: avoids score→0 in tails for large trends.
-    t0 = np.arange(n, dtype=float)
-    centered = slope * t0 + residuals
-
-    s = float(np.std(residuals, ddof=1))
-    h = max(1e-5, s * 1e-3)
-
-    # clip bounds from score at residuals (the in-distribution set)
-    f_at_res = np.maximum(kde(residuals), 1e-12)
-    score_at_res = -(kde(residuals + h) - kde(residuals - h)) / (2.0 * h * f_at_res)
-    lo = float(np.percentile(score_at_res, 2))
-    hi = float(np.percentile(score_at_res, 98))
-
-    # Gaussian score fallback: c(x) = x/sigma^2 (always defined)
-    c_hat = centered / (s ** 2)
-
-    # Override with KDE score where centered is within residual support
-    support_lo = float(residuals.min()) - 3.0 * s
-    support_hi = float(residuals.max()) + 3.0 * s
-    in_support = (centered >= support_lo) & (centered <= support_hi)
-    if in_support.any():
-        c_in = centered[in_support]
-        f_in = np.maximum(kde(c_in), 1e-12)
-        s_in = -(kde(c_in + h) - kde(c_in - h)) / (2.0 * h * f_in)
-        c_hat[in_support] = np.clip(s_in, lo, hi)
-
-    # 1-indexed time weights for normalizer (sum t^2 = n(n+1)(2n+1)/6 ≈ n^3/3)
-    t = np.arange(1, n + 1, dtype=float)
-    Lambda_n = float(np.sum(c_hat * t))
-
-    # AR(1) correction omitted: (1+phi)/(1-phi) inflation makes E[log E_n|H1] < 0
-    # for phi > 1/3, killing the signal. E_n is anti-conservative for correlated
-    # data; interpret alongside Hamed-Rao p-value for autocorrelated series.
-    normalizer = omega ** 2 * I_hat * n ** 3 / 6.0
-
-    log_E = omega * Lambda_n - normalizer
-    significant = log_E > math.log(20.0)
-    # clamp for display; use log_E for significance to avoid float overflow
-    E_n_display = round(float(np.exp(min(log_E, 50.0))), 2)
-
+    phi_used = _ep_ar1_phi(y)
+    log_E = log_bayes_factor_trend(y, phi_used)
     return {
-        "E_n":         E_n_display,
+        "E_n":         round(float(np.exp(min(log_E, 50.0))), 2),
         "log_E":       round(log_E, 4),
-        "threshold":   20,
-        "significant": significant,
-        "phi_note":    abs(phi) > 0.4,
+        "threshold":   int(EP_THRESHOLD),
+        "significant": bool(log_E >= math.log(EP_THRESHOLD)),
+        "phi_used":    round(phi_used, 3),
+        "phi_note":    phi_used > 0.4,
     }
 
 

@@ -129,7 +129,7 @@ Tidemark applies the following statistical methods automatically:
 | Modified Mann-Kendall (Hamed-Rao, lag=3) | Low autocorrelation, symmetric residuals | Hamed & Rao 1998 |
 | MKC3 third-order cumulant correction | Low autocorrelation, skewed residuals (&#124;skewness&#124; > 0.5, n ≥ 20) | Then et al. 2025 |
 | Partial Mann-Kendall with ENSO control | When ENSO coverage ≥ 80% of period | Libiseller & Grimvall 2002 |
-| AREP e-process | Sequential evidence accumulation | Ramdas et al. 2023 |
+| Mixture e-process (trend Bayes factor) | Always, when n ≥ 15; E ≥ 20 flags a trend. Level-0.05 guarantee for iid Gaussian noise only (AR(1) pre-whitened, simulated) | Ramdas et al. 2023; Pérez-Ortiz et al. 2024 |
 | Innovative Trend Analysis (ITA) | When extremes diverge (low and high tercile slopes have opposite signs) | Şen 2012 |
 | Bayesian changepoint detection (one line vs two, NIG marginal likelihood) | Always, when n ≥ 12 annual values | conjugate Bayesian regression |
 

@@ -223,15 +223,16 @@ fn print_eprocess_line(ep: &serde_json::Value) {
         None                  => return,
     };
 
+    // E_n >= 20 bounds the false-positive rate at 5% for iid Gaussian noise only.
     if significant {
-        println!("{:<12}{}   \u{2713} anytime-valid   (\u{03b1}=0.05)",
+        println!("{:<12}{}   \u{2713} E_n >= 20   (iid-Gaussian null, level 0.05)",
             "e-process", e_n_str);
     } else {
-        println!("{:<12}{}   threshold: 20   (\u{03b1}=0.05)",
+        println!("{:<12}{}   threshold: 20   (iid-Gaussian null, level 0.05)",
             "e-process", e_n_str);
     }
     if phi_note {
-        println!("{:<12}note: autocorrelation phi>0.4, e-process is approximate, interpret with p-value",
+        println!("{:<12}note: autocorrelation phi>0.4, e-process bound is approximate, interpret with p-value",
             "");
     }
 }

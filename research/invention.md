@@ -193,6 +193,10 @@ Current four-way comparison uses p-values → has this flaw inside the MC trajec
 
 Fix: replace p-values with e-processes (anytime-valid). See e-process.md.
 
+Note (2026-11-15): the original AREP statistic proposed here was invalid (omega fitted on the
+tested data; false-positive rate 12% at nominal 5%). Replaced by a mixture Bayes factor; see
+arep.md. Anytime-validity is claimed for iid Gaussian noise only.
+
 ### the ARE formula correction
 
 The formula "ARE = 12σ²·[∫f²]²" is ARE(MK vs OLS/t-test), not ARE(MK vs optimal rank test).

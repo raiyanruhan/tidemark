@@ -231,7 +231,7 @@
   #pad(left: 2.2em)[
     #toc-entry("5.1", [The Significance Trajectory], "16", lnk: <s-sigtraj>)
     #toc-entry("5.2", [The Earth System Scan], "17", lnk: <s-scan>)
-    #toc-entry("5.3", [The Adaptive Rank Evidence Process (AREP)], "18", lnk: <s-arep>)
+    #toc-entry("5.3", [The Trend E-process], "18", lnk: <s-arep>)
     #toc-entry("5.4", [MKC3 Variance Correction], "19", lnk: <s-novel-mkc3>)
     #toc-entry("5.5", [Partial Mann-Kendall ENSO Separation], "20", lnk: <s-novel-pmk>)
     #toc-entry("5.6", [Bayesian Changepoint Detection], "21", lnk: <s-novel-bocpd>)
@@ -428,8 +428,8 @@ when used as actually intended.
 The theoretically correct framework is the *e-process* [11], a nonneg
 adapted process $E_n$ such that $E[E_tau | H_0] <= 1$ for every stopping time $tau$.
 Rejecting $H_0$ when $E_n >= 1 slash alpha$ controls the false positive rate at $alpha$
-regardless of when the check is performed. We introduce a sequential evidence accumulation process inspired by e-process theory
-for climate trend detection in Section 5.3.
+regardless of when the check is performed. Section 5.3 describes the e-process used for trend detection (valid for IID Gaussian noise;
+simulation-checked otherwise).
 
 // ============================================================
 // 3. DATA
@@ -965,63 +965,29 @@ The system scan gives a complete picture at a glance: which Earth system variabl
 already significant, which are trending but sub-threshold, which are below the detection
 floor, and which will cross significance first.
 
-== The Adaptive Rank Evidence Process (AREP) <s-arep>
+== The Trend E-process <s-arep>
 
-As described in Section 2.4, p-values become invalid under sequential monitoring.
-The theoretically correct replacement is an e-process. We introduce the Adaptive
-Rank Evidence Process (AREP) for climate trend detection.
+As described in Section 2.4, p-values become invalid under sequential monitoring. An
+e-process is the replacement. An earlier version of this section described an "Adaptive
+Rank Evidence Process" that plugged the Sen slope, fitted on the tested series, into an
+exponential score statistic. That statistic is not an e-process (the plug-in is fitted on the
+same data, the intercept was treated as known, and its false-positive rate at the
+nominal 5% threshold was 12.2% on IID Gaussian data at $n = 45$). It has been removed.
 
-The AREP combines three components not previously combined in climate analysis:
-(1) the adaptive score function $hat(c)(x) = -hat(f)'(x) slash hat(f)(x)$ estimated
-from the residual density [12, 13], (2) the e-process construction
-for sequential evidence accumulation inspired by e-process theory [11], and (3) application to Earth
-system climate trend detection.
+The current statistic tests $Y_t = a + beta t + sigma e_t$ against $H_0: beta = 0$. The
+standardised slope $delta = beta slash sigma$ gets a fixed scale-mixture normal prior,
+and the intercept $a$ and scale $sigma$ are integrated out with right-Haar priors. The
+result $E_n$ is the likelihood ratio of the maximal invariant under $y -> a + s y$. For
+IID Gaussian errors $E[E_n | H_0] = 1$ at every $n$ and $(E_n)$ is a test martingale in
+the invariant filtration, so rejecting at $E_n >= 20$ has false-positive rate at most 5%,
+also when checked every year. Details and derivation are in `research/stats/arep.md`.
 
-The construction begins from the model $Y_t = omega dot.op t + epsilon_t$ with
-$epsilon_t ~ f$ (unknown density).
-
-*Step 1: Initial estimate.* Compute Sen's slope $hat(omega)$ and residuals
-$hat(epsilon)_t = Y_t - hat(omega) dot.op t$.
-
-*Step 2: Estimate the optimal score function.* Fit a Gaussian KDE to the residuals
-to estimate $hat(f)$. Compute the score function:
-
-$ hat(c)(x) = -frac(hat(f)'(x), hat(f)(x)) $
-
-The estimated Fisher information is:
-
-$ hat(I) = integral hat(c)(x)^2 hat(f)(x) d x approx frac(1, n) sum_t hat(c)(hat(epsilon)_t)^2 $
-
-*Step 3: Score process.* Build the cumulative score:
-
-$ Lambda_n = sum_(t=1)^n hat(c)(hat(epsilon)_t) dot.op t $
-
-For comparison, the Mann-Kendall statistic uses $"sgn"(hat(epsilon)_t)$ in place of
-$hat(c)(hat(epsilon)_t)$. AREP uses the data-estimated optimal score.
-
-*Step 4: E-process.*
-
-$ E_n = exp lr((hat(omega) dot.op Lambda_n - frac(hat(omega)^2 dot.op hat(I) dot.op n^3, 6))) $
-
-*Step 5: Sequential significance.* Reject $H_0$ when $E_n >= 20$ (at $alpha = 0.05$).
-AREP is a sequential evidence accumulation index inspired by e-process theory. The formal
-anytime-validity property -- $E[E_tau | H_0] <= 1$ for all stopping times -- requires
-a supermartingale argument under plug-in parameter estimation that remains under
-investigation. $E_n$ is interpretable as evidence strength regardless.
-
-The AREP output reads:
-
-```
-  evidence state    E_n = 7.3   (threshold for significance: 20)
-  growth rate       +1.4 E-units per year
-  projected cross   2031, 85% PI: 2027-2035
-  note   evidence accumulation index; formal anytime-validity under investigation
-```
-
-$E_n = 7.3$ is more informative than $p = 0.08$. Evidence is building at a measurable
-rate. The formal proof that this construction maintains $E[E_tau | H_0] <= 1$ for all
-stopping times is under investigation; empirically, $E_n$ grows predictably with trend
-strength and converges to expected values under simulation.
+For autocorrelated noise the series is Prais-Winsten whitened with an estimated lag-1
+coefficient; this carries no exact guarantee. Simulated false-positive rates at
+$E_n >= 20$ ($n = 30, 45, 60$): IID Gaussian $<= 0.2%$, skewed $<= 0.1%$, AR(1)
+$phi = 0.3$: $<= 0.7%$, $phi = 0.6$: $<= 2.2%$. The rule is conservative: for a trend that
+Mann-Kendall detects about half the time, the e-process fires about 9% of the time.
+It is an evidence measure to read next to the p-value, not a more sensitive test.
 
 == MKC3 Variance Correction <s-novel-mkc3>
 
@@ -1375,9 +1341,9 @@ The principal technical contributions are:
   in a single command and producing a system fingerprint that directly implements the
   "Earth System Trend Detective" challenge framing.
 
-+ The *Adaptive Rank Evidence Process (AREP)*, a sequential evidence accumulation index
-  inspired by e-process theory, applied to climate trend detection; formal anytime-validity
-  under investigation.
++ A *mixture-Bayes-factor e-process* for linear trend, with intercept and scale integrated
+  out by invariance; anytime-valid for IID Gaussian noise, simulation-checked for
+  autocorrelated and skewed noise.
 
 + The *MKC3 third-order cumulant variance correction* (Then et al., 2025): the first
   open implementation, applied automatically for skewed residuals ($|"skewness"| > 0.5$),

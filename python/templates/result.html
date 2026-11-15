@@ -148,7 +148,7 @@
               </tr>
               {% if r.e_process %}
               <tr>
-                <td><span class="tip" data-tip="An anytime-valid alternative to the p-value. E_n >= 20 means significant at α=0.05, and stays valid even if you check every year — no Bonferroni correction needed. Unlike p-values, you can peek at this number at any time without inflating the false positive rate.">E-process (AREP)</span></td>
+                <td><span class="tip" data-tip="Evidence against 'no linear trend', as a Bayes factor with the intercept and noise scale integrated out. E_n >= 20 caps the false-positive rate at 5% when the noise is independent and Gaussian, and that cap also holds if you re-check every year. Skewed or autocorrelated noise has no exact guarantee: the series is pre-whitened for lag-1 autocorrelation and the error rate was checked by simulation only. Read it next to the p-value.">E-process (trend Bayes factor)</span></td>
                 <td class="num">E_n = {{ '%.1f'|format(r.e_process.E_n) }}{% if r.e_process.significant %} ✓{% endif %} &nbsp;/ {{ r.e_process.threshold }}</td>
               </tr>
               {% endif %}
