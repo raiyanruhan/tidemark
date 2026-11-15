@@ -320,10 +320,14 @@ def _resolve_location(form):
     try:
         lat = float(form.get("lat", ""))
         lon = float(form.get("lon", ""))
-        display = f"{abs(lat):.2f}{'N' if lat >= 0 else 'S'}, {abs(lon):.2f}{'E' if lon >= 0 else 'W'}"
-        return lat, lon, display
     except (TypeError, ValueError):
         raise ValueError("Provide a known location name or valid lat/lon coordinates.")
+    if not (-90 <= lat <= 90):
+        raise ValueError(f"Latitude {lat} is out of range (must be -90 to 90).")
+    if not (-180 <= lon <= 180):
+        raise ValueError(f"Longitude {lon} is out of range (must be -180 to 180).")
+    display = f"{abs(lat):.2f}{'N' if lat >= 0 else 'S'}, {abs(lon):.2f}{'E' if lon >= 0 else 'W'}"
+    return lat, lon, display
 
 
 def _resolve_variable(form):

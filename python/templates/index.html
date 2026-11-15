@@ -664,9 +664,14 @@
     var opt = sel.options[sel.selectedIndex];
     var epoch = parseInt(opt ? (opt.dataset.epoch || '1981') : '1981');
     var startInput = document.getElementById('start');
+    var endInput   = document.getElementById('end');
     startInput.min = epoch;
+    endInput.min   = epoch + 1;
     if (parseInt(startInput.value) < epoch) {
       startInput.value = epoch;
+    }
+    if (parseInt(endInput.value) < epoch + 1) {
+      endInput.value = epoch + 1;
     }
   }
   document.getElementById('var').addEventListener('change', updateYearRange);
