@@ -121,10 +121,10 @@ def monthly_to_annual_min(monthly_by_year, min_months=6):
     return annual
 
 
-def fetch_annual_multi(lat, lon, params, start, end):
+def fetch_monthly_multi(lat, lon, params, start, end):
     """
     Single POWER request for multiple params.
-    Returns {year: {param: annual_mean}}, only years complete in all params.
+    Returns {param: {year: {month: value}}}, fill values and month 13 dropped.
     """
     resp = requests.get(
         POWER_URL,
@@ -138,21 +138,20 @@ def fetch_annual_multi(lat, lon, params, start, end):
     resp.raise_for_status()
     param_data = resp.json()["properties"]["parameter"]
 
-    by_year = {p: {} for p in params}
+    out = {p: {} for p in params}
     for p in params:
         for key, val in param_data[p].items():
             year, month = int(key[:4]), int(key[4:])
             if month == 13 or val <= FILL_VALUE + 1.0:
                 continue
-            by_year[p].setdefault(year, []).append(val)
+            out[p].setdefault(year, {})[month] = val
+    return out
 
-    complete = set.intersection(*[
-        {y for y, v in by_year[p].items() if len(v) == 12} for p in params
-    ])
-    return {
-        year: {p: float(np.mean(by_year[p][year])) for p in params}
-        for year in sorted(complete)
-    }
+
+def _complete_years(monthly, params):
+    return sorted(set.intersection(*[
+        {y for y, m in monthly[p].items() if len(m) == 12} for p in params
+    ]))
 
 
 NOAA_ONI_URL = "https://www.cpc.noaa.gov/data/indices/oni.ascii.txt"
@@ -205,19 +204,25 @@ def fetch_oni_annual(years):
 
 def compute_compound_series(lat, lon, var, start, end):
     """
-    VPD: es(T) * (1 - RH/100), Tetens/Buck (1981) formula, kPa.
-    DTR: T2M_MAX - T2M_MIN, degC.
+    VPD: es(T) * (1 - RH/100), Tetens formula, kPa. Computed per month, then averaged
+         (es is convex, so applying it to annual-mean T biases VPD low).
+    DTR: POWER T2M_RANGE (mean daily range). T2M_MAX - T2M_MIN is NOT the diurnal
+         range: POWER monthly MAX/MIN are the month's extreme values.
     """
     if var == "VPD":
-        multi = fetch_annual_multi(lat, lon, ["T2M", "RH2M"], start, end)
+        mm = fetch_monthly_multi(lat, lon, ["T2M", "RH2M"], start, end)
         series = []
-        for year in sorted(multi):
-            T  = multi[year]["T2M"]
-            RH = multi[year]["RH2M"]
-            es = 0.6108 * math.exp(17.27 * T / (T + 237.3))
-            series.append((year, es * (1.0 - RH / 100.0)))
+        for year in _complete_years(mm, ["T2M", "RH2M"]):
+            vpd = []
+            for m in range(1, 13):
+                T  = mm["T2M"][year][m]
+                RH = mm["RH2M"][year][m]
+                es = 0.6108 * math.exp(17.27 * T / (T + 237.3))
+                vpd.append(es * (1.0 - RH / 100.0))
+            series.append((year, float(np.mean(vpd))))
         return series
     if var == "DTR":
-        multi = fetch_annual_multi(lat, lon, ["T2M_MAX", "T2M_MIN"], start, end)
-        return [(y, multi[y]["T2M_MAX"] - multi[y]["T2M_MIN"]) for y in sorted(multi)]
+        mm = fetch_monthly_multi(lat, lon, ["T2M_RANGE"], start, end)
+        return [(y, float(np.mean(list(mm["T2M_RANGE"][y].values()))))
+                for y in _complete_years(mm, ["T2M_RANGE"])]
     raise ValueError(f"unknown compound variable: {var}")
