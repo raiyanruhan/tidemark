@@ -32,6 +32,15 @@ NDVI_SCALE     = 0.0001
 NDVI_VALID_MIN = -2000  # pre-scale; fill value is -3000, outside this range
 NDVI_VALID_MAX = 10000
 
+# MOD13Q1 pixel reliability (rank): 0 good, 1 marginal, 2 snow/ice, 3 cloudy,
+# -1 fill. Cloudy pixels still carry valid-range NDVI, so NDVI alone cannot
+# identify them; the reliability band must be used. Keep good + marginal only.
+RELIABILITY_BAND  = "250m_16_days_pixel_reliability"
+RELIABILITY_KEEP  = (0, 1)
+
+# Counts from the most recent uncached fetch (composites seen / kept / dropped).
+LAST_FETCH_STATS = {}
+
 # MODIS Terra first granule: February 2000
 MODIS_EPOCH = 2000
 
@@ -48,7 +57,7 @@ def _cache_path(lat, lon, start_year, end_year):
     """Path for cached NDVI JSON under ~/.tidemark/cache/."""
     cache_dir = os.path.join(os.path.expanduser("~"), ".tidemark", "cache")
     os.makedirs(cache_dir, exist_ok=True)
-    fname = f"ndvi_{lat:.4f}_{lon:.4f}_{start_year}_{end_year}.json"
+    fname = f"ndvi_qa_{lat:.4f}_{lon:.4f}_{start_year}_{end_year}.json"
     return os.path.join(cache_dir, fname)
 
 
@@ -100,7 +109,9 @@ def fetch_ndvi_monthly(lat, lon, start_year, end_year, progress=None):
     start_year clamped to MODIS_EPOCH (2000). Returns {} on total failure.
     Multiple 16-day composites falling in the same calendar month are averaged.
     NDVI = raw_int * 0.0001; valid range -0.2 to 1.0.
-    Cloud-contaminated pixels (fill=-3000) are excluded; years with <6 valid
+    Composites are kept only when the pixel reliability band is 0 (good) or
+    1 (marginal). Cloudy (3) and snow/ice (2) composites carry valid-range NDVI
+    and are excluded via that band, not via a fill value. Years with <6 valid
     months are dropped downstream by monthly_to_annual_min.
 
     First fetch for a (lat, lon, start, end) combination is cached to
@@ -147,8 +158,20 @@ def fetch_ndvi_monthly(lat, lon, start_year, end_year, progress=None):
             for s, e in failed:
                 all_records.extend(_fetch_chunk(session, lat, lon, s, e))
 
+    # The subset API returns every band for each date (no band filter is sent),
+    # so reliability arrives in the same response. Index it by calendar date.
+    reliability = {}
+    for rec in all_records:
+        if rec.get("band") != RELIABILITY_BAND:
+            continue
+        try:
+            reliability[rec.get("calendar_date", "")] = int(rec["data"][0])
+        except (KeyError, IndexError, ValueError, TypeError):
+            continue
+
     # group valid composites into (year, month) buckets
     buckets = {}
+    n_seen = n_dropped = 0
     for rec in all_records:
         if rec.get("band") != NDVI_BAND:
             continue
@@ -163,12 +186,19 @@ def fetch_ndvi_monthly(lat, lon, start_year, end_year, progress=None):
             continue
 
         cal = rec.get("calendar_date", "")
+        n_seen += 1
+        # missing reliability = unknown quality: drop
+        if reliability.get(cal) not in RELIABILITY_KEEP:
+            n_dropped += 1
+            continue
         try:
             year, month = int(cal[:4]), int(cal[5:7])
         except (ValueError, IndexError):
             continue
 
         buckets.setdefault((year, month), []).append(raw * NDVI_SCALE)
+
+    LAST_FETCH_STATS.update(seen=n_seen, dropped=n_dropped, kept=n_seen - n_dropped)
 
     # average composites within each month
     by_year = {}
