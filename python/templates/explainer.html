@@ -115,12 +115,14 @@
         the trend is real but underseen, or genuinely absent. No tool told you.
       </p>
       <p>
-        Cairo rainfall is a concrete example of what that silence costs. The standard
-        analytical formula, which every existing tool uses, says this trend will become
-        significant around 2128. tidemark's Monte Carlo estimate says 2051. The 77-year
-        gap exists because Cairo's rainfall residuals are right-skewed, and the standard
-        formula assumes a bell curve. tidemark detects that mismatch, names it, and
-        directs you to the estimate that is correct for the actual noise structure.
+        Cairo rainfall is a concrete example of what that silence costs. The analytical
+        formula returns a crossing year around 2125; Weatherhead 2078; the Monte Carlo
+        median is beyond 2105 — with 51.5% of simulated paths never crossing within
+        the 80-year horizon. The methods disagree by decades, and more than half the
+        simulations say the record cannot answer when. Cairo's rainfall residuals are
+        right-skewed (skewness 1.95), and the standard formulas assume a bell curve.
+        tidemark detects that mismatch, names it, and shows you the full set of
+        estimates so you can judge the uncertainty.
       </p>
 
       <hr class="p-rule--muted" />
@@ -180,9 +182,9 @@
           </p>
           <p>
             When you apply the bell-curve method to skewed data, you get a confident
-            wrong answer. For Cairo's rainfall, the two formula-based methods predict
-            significance around 2128. The simulation method, which makes no assumption
-            about the data shape, says 2051. That is a 77-year error.
+            wrong answer. For Cairo's rainfall, methods disagree by decades and more than
+            half the Monte Carlo simulations never cross within the 80-year horizon —
+            the record cannot say when significance will arrive.
           </p>
           <p>
             tidemark detects this automatically. It runs a normality test on the
@@ -356,8 +358,8 @@
       </p>
       <p>
         tidemark detects high autocorrelation automatically. When the lag-1 autocorrelation
-        of the detrended residuals exceeds 0.3 in absolute value, it switches to a block
-        bootstrap test (Önöz &amp; Bayazit, 2012). Instead of assuming a parametric
+        of the detrended residuals exceeds 0.3 in absolute value, block bootstrap
+        (Önöz &amp; Bayazit, 2012) is computed and reported for comparison. Instead of assuming a parametric
         dependence structure, block bootstrap resamples contiguous blocks of residuals,
         preserving whatever within-block dependence structure the data actually has. The
         block length is chosen automatically using the Politis-Romano bandwidth estimator,
@@ -381,7 +383,7 @@
           </p>
           <p>
             This is the same method used in R's <code>modifiedmk</code> package for
-            hydrology research. No Python implementation existed before Tidemark.
+            hydrology research. We are not aware of another Python implementation.
           </p>
         </div>
       </div>
@@ -405,13 +407,13 @@
         Z-score and producing false positives.
       </p>
       <p>
-        When autocorrelation is low (|φ| ≤ 0.3) but residual skewness is high, tidemark
-        uses the MKC3 variance correction (Then et al., 2025). MKC3 adds a third-order
+        When autocorrelation is low (|φ| ≤ 0.3) but residual skewness is high, the
+        MKC3 variance correction (Then et al., 2025) is computed and reported for comparison. MKC3 adds a third-order
         cumulant correction term that captures the skewness of lag products, which
         Hamed-Rao misses. For symmetric series the two corrections are mathematically
-        identical. For Cairo precipitation (skewness &#8776; 1.95), the correction changes
-        the verdict from significant (Hamed-Rao, p &#8776; 0.03) to not significant
-        (MKC3, p &gt; 0.10).
+        identical. For Cairo precipitation (skewness &#8776; 1.95), Hamed-Rao gives
+        p &#8776; 0.03 (significant) while MKC3 gives p &gt; 0.10 (not significant).
+        Neither is used for the verdict; they are shown alongside.
       </p>
       <p>
         These corrections are reported for comparison. The verdict itself comes from a
@@ -607,12 +609,13 @@
         was a specific year when the dynamics changed.
       </p>
       <p>
-        A series with a structural break is a concrete problem for Mann-Kendall. If a
-        variable warmed at +0.055 °C per year until 1997, then flattened, the net slope
-        across the full record is small and the significance is marginal. Mann-Kendall
-        reports p = 0.047 and you do not know why the result is so weak. The Bayesian
-        changepoint scan tells you: the trend reversed at 1997 and the two halves partially
-        cancel in the net statistic.
+        A series with a structural break is a concrete problem for Mann-Kendall. It tests
+        the full record as one block; if the dynamics changed at some point, the overall
+        result may be weak or misleading. Dhaka temperature (NASA POWER 1981–2025)
+        illustrates this: Mann-Kendall gives p = 0.037 (significant), and the sup-F
+        trend-break test (Andrews 1993) finds a break at 1997 (p = 0.006). The Bayesian
+        scan does not flag a break in this case, illustrating that the two tests have
+        different sensitivities and are complementary.
       </p>
       <p>
         tidemark scans every candidate split year using the Normal-Inverse-Gamma marginal
@@ -630,9 +633,9 @@
         <div class="col-6 col-medium-3">
           <p>
             When a changepoint is detected, the result page shows the detected year,
-            the log Bayes factor (the strength of evidence on a scale where 3.0 is the
-            detection threshold), a calibrated confidence percentage, and the trend slope
-            before and after the break. The result also notes whether the trend steepened,
+            the log Bayes factor (the strength of evidence on a scale where 3.5 is the
+            detection threshold), a display confidence percentage (a scale, not a posterior
+            probability), and the trend slope before and after the break. The result also notes whether the trend steepened,
             weakened, or reversed direction.
           </p>
           <p>
@@ -653,15 +656,14 @@
         <div class="col-6 col-medium-3">
           <p>
             A Bayes factor compares two explanations for the same data. A log Bayes factor
-            of 3.0 means the two-regime explanation is e³ ≈ 20 times more probable than the
-            single-regime explanation. A log Bayes factor of 18 means the two-regime
-            explanation is 65 million times more probable. It is a direct statement about
-            relative probability, not a threshold test.
+            of 3.5 means the two-regime explanation is e^3.5 ≈ 33 times more probable than the
+            single-regime explanation. It is a direct statement about relative probability,
+            not a threshold test.
           </p>
           <p>
-            The threshold of 3.0 was calibrated against random data: for a typical climate
-            series length, only 3% of purely random series produce a spurious log Bayes
-            factor above 3.0.
+            The detection threshold is log BF &gt; 3.5 combined with exceeding the bootstrap
+            null's 95th percentile. This combination reduces spurious detections for the
+            typical climate record lengths (n = 20–50).
           </p>
         </div>
       </div>
