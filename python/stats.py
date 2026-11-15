@@ -295,6 +295,66 @@ def ita_analysis(x):
     }
 
 
+def detect_changepoints(annual_values, hazard=0.02):
+    """
+    BOCPD changepoint detection (Adams & MacKay 2007).
+    hazard: prior P(changepoint) per year — 0.02 = expect 1 in 50 years.
+    Returns (cp_probs, cp_idx) where cp_idx is None if no confident break found.
+    """
+    try:
+        from fastbocpd import BOCPD
+    except ImportError:
+        return None, None
+
+    x = np.array(annual_values, dtype=float)
+    model = BOCPD(hazard_rate=hazard)
+    model.fit(x)
+    cp_probs = model.changepoint_probabilities()
+
+    interior = cp_probs[3:-3]
+    if len(interior) > 0 and interior.max() > 0.3:
+        cp_idx = int(np.argmax(interior)) + 3
+    else:
+        cp_idx = None
+
+    return cp_probs, cp_idx
+
+
+def bocpd_analysis(annual_values, years):
+    """
+    Full BOCPD analysis returning structured result for Tidemark output.
+    Returns None if fast-bocpd not installed or series too short.
+    """
+    if len(annual_values) < 10:
+        return None
+
+    cp_probs, cp_idx = detect_changepoints(annual_values)
+    if cp_probs is None:
+        return None
+
+    result = {
+        "changepoint_probabilities": [round(float(p), 4) for p in cp_probs],
+        "changepoint_detected": cp_idx is not None,
+    }
+
+    if cp_idx is not None:
+        cp_year = years[cp_idx]
+        result["changepoint_year"]       = int(cp_year)
+        result["changepoint_confidence"] = round(float(cp_probs[cp_idx]), 3)
+
+        pre  = np.array(annual_values[:cp_idx], dtype=float)
+        post = np.array(annual_values[cp_idx:], dtype=float)
+
+        if len(pre) >= 5 and len(post) >= 5:
+            slope_pre,  _, _, _, _ = stats.linregress(np.arange(len(pre)),  pre)
+            slope_post, _, _, _, _ = stats.linregress(np.arange(len(post)), post)
+            result["slope_before"] = round(float(slope_pre),  6)
+            result["slope_after"]  = round(float(slope_post), 6)
+            result["slope_change"] = round(float(slope_post - slope_pre), 6)
+
+    return result
+
+
 def run_mannkendall(vals):
     """
     Hamed-Rao modified Mann-Kendall test (lag=3).

@@ -48,6 +48,7 @@ pub fn print_result(config: &Config, json: &serde_json::Value) {
         print_trajectory(json);
     }
 
+    print_bocpd_block(&json["bocpd"], start_year, end_year, &config.unit);
     print_enso_block(&json["enso_correction"], &config.unit);
 }
 
@@ -366,6 +367,45 @@ fn print_trajectory(json: &serde_json::Value) {
     }
 
     println!("  note   projection assumes observed trend continues at measured rate -- not a forecast");
+}
+
+fn print_bocpd_block(bocpd: &serde_json::Value, start_year: u64, end_year: u64, unit: &str) {
+    if bocpd["changepoint_detected"].as_bool() != Some(true) {
+        return;
+    }
+    let cp_year   = match bocpd["changepoint_year"].as_i64() { Some(y) => y, None => return };
+    let conf      = bocpd["changepoint_confidence"].as_f64().unwrap_or(0.0);
+    let slope_pre = match bocpd["slope_before"].as_f64() { Some(v) => v, None => return };
+    let slope_pst = match bocpd["slope_after"].as_f64()  { Some(v) => v, None => return };
+
+    println!();
+    println!("changepoint analysis (BOCPD):");
+    println!("  structural break detected: {}   (confidence {:.0}%)", cp_year, conf * 100.0);
+    println!("  {:<20}{} {} / year   ({}-{})",
+        format!("slope before {}:", cp_year),
+        fmt_slope(slope_pre), unit,
+        start_year, cp_year - 1,
+    );
+    println!("  {:<20}{} {} / year   ({}-{})",
+        format!("slope after {}:", cp_year),
+        fmt_slope(slope_pst), unit,
+        cp_year, end_year,
+    );
+
+    let abs_pre = slope_pre.abs();
+    let abs_pst = slope_pst.abs();
+    let same_sign = slope_pre * slope_pst >= 0.0;
+
+    if !same_sign {
+        println!("  trend reversed sign after {}", cp_year);
+    } else if abs_pre > 1e-12 {
+        let ratio = abs_pst / abs_pre;
+        if ratio >= 1.5 {
+            println!("  trend steepened {:.1}x after {}", ratio, cp_year);
+        } else if ratio <= 0.67 {
+            println!("  trend weakened {:.1}x after {}", 1.0 / ratio, cp_year);
+        }
+    }
 }
 
 fn print_enso_block(enso: &serde_json::Value, unit: &str) {

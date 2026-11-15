@@ -48,9 +48,9 @@ from fetch       import (APPEEARS_PARAMS, COMPOUND_PARAMS, LAADS_PARAMS,
 from milestones  import compute_milestones
 from records     import record_rate
 from seasonal    import run_seasonal_mk
-from stats       import (compute_arep, compute_efficiency_metrics, compute_residuals,
-                         detection_floor, ita_analysis, lag1_acf, mk_z_mkc3,
-                         partial_mk, run_mannkendall)
+from stats       import (bocpd_analysis, compute_arep, compute_efficiency_metrics,
+                         compute_residuals, detection_floor, ita_analysis, lag1_acf,
+                         mk_z_mkc3, partial_mk, run_mannkendall)
 from trajectory  import compute_pvalue_series, compute_trajectory
 
 
@@ -127,6 +127,7 @@ def analyse(vals, years, param, last_year, monthly_by_year=None, progress=None, 
                 pmk["significant_raw"] = significant
 
     cp_detected, cp_idx, cp_p = pettitt_changepoint(vals)
+    bocpd_result              = bocpd_analysis(vals, years)
     obs_r, exp_r, rec_ratio   = record_rate(vals, direction)
     seasonal                  = run_seasonal_mk(monthly_by_year) if monthly_by_year else {}
 
@@ -152,6 +153,7 @@ def analyse(vals, years, param, last_year, monthly_by_year=None, progress=None, 
             "year":     years[cp_idx] if cp_detected else None,
             "p":        cp_p,
         },
+        "bocpd": bocpd_result,
         "records": {
             "observed": obs_r,
             "expected": exp_r,
