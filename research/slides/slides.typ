@@ -29,7 +29,7 @@
 == The Gap Every Tool Leaves Open
 
 #cols[
-  Every existing tool stops here:
+  Most tools stop here:
 
   ```
   p-value   0.112   not yet significant
@@ -64,8 +64,8 @@
     85% PI        2028 to 2053
 
   milestones (once significant):
-    Paris +1.5C   2066
-    Paris +2.0C   2079
+    local +0.5C warming  2048
+    local +1.0C warming  2061
   ```
 ]
 
@@ -93,13 +93,13 @@
   location   Dhaka, Bangladesh (23.81N, 90.41E)
   variable   land surface temp (LST, C)
   period     2001 - 2025  (25 years)
-  test       Modified Mann-Kendall (Hamed-Rao)
+  test       Mann-Kendall, AR(1) sieve bootstrap
 
   trend      +0.037 C / year
   p-value    0.018   significant
 
-  Paris +1.5C   2066
-  Paris +2.0C   2079
+  local +0.5C warming   2041
+  local +1.0C warming   2054
   ```
 
   #v(0.3em)
@@ -133,8 +133,9 @@
 
   + Rust CLI resolves location → lat/lon
   + Python fetches from correct NASA API
-  + *Auto-select MK test:* block bootstrap (|φ|>0.3) · MKC3 (skewed) · Hamed-Rao
-  + Sen's slope · Pettitt changepoint
+  + *Mann-Kendall, AR(1) sieve-bootstrap null* (verdict)
+  + Block bootstrap · MKC3 · Hamed-Rao shown for comparison
+  + Sen's slope · sup-F trend-break test (Andrews 1993)
   + ENSO separation (partial MK, rank-based)
   + ITA: sub-population slopes (extremes divergence)
   + *Bayesian changepoint scan (NIG marginal likelihood)*
@@ -164,14 +165,14 @@
     [Analytical MK], [Gaussian IID noise],
     [Weatherhead 1998], [AR(1) autocorrelation],
     text(fill: rgb("#58a6ff"), weight: "bold")[Monte Carlo],
-    text(fill: rgb("#58a6ff"))[empirical bootstrap — trusted],
+    text(fill: rgb("#58a6ff"))[AR(1) simulation, skewness-robust],
     [CRB lower bound], [Fisher information floor],
     table.hline(),
   )
 
   #v(0.3em)
-  *p-value auto-selection:* block bootstrap (|φ|>0.3) · MKC3 (skewed) · Hamed-Rao \
-  If trajectory methods diverge: prints why. Trusts Monte Carlo.
+  *Verdict:* AR(1) sieve-bootstrap null; block bootstrap · MKC3 · Hamed-Rao shown for comparison \
+  If trajectory methods diverge: prints why and shows all estimates.
 ][
   *Dhaka annual rainfall — not yet significant:*
 
@@ -180,14 +181,14 @@
   slope    -0.016  mm/day per year
 
   significance trajectory:
-    Monte Carlo   2037  (n=1000, correct)
+    Monte Carlo   2037  (n=1000, AR(1) sim)
     Weatherhead   2028  (OLS, AR(1))
     analytical    2042  (IID approx)
     85% PI        2028 to 2053
   ```
 
-  *The math has always existed. \
-  Nobody built it into a tool.*
+  *The math existed in the literature. \
+  We built it into a tool.*
 ]
 
 // Slide 6: Live results across three variables
@@ -203,8 +204,8 @@
   trend  +0.037 C/yr
   p      0.018  ✓
 
-  +1.5C  2066
-  +2.0C  2079
+  +0.5C local  2041
+  +1.0C local  2054
   ```
 ][
   *Annual Rainfall* \
@@ -226,11 +227,11 @@
   #v(0.3em)
 
   ```
-  p      0.047  ✓
+  p      0.037  ✓
   slope  -0.021 C/yr
   tau    -0.361
-  Bayesian CP: 1997
-  log BF = 18 (99%)
+  Sup-F break: 1997 (p=0.006)
+  Bayesian scan: no break
   ```
 ]
 
@@ -292,24 +293,23 @@
   Bayes factor is the structural break.
 
   #v(0.3em)
-  #text(size: 0.78em)[Log BF > 3.0 = p97 of null, strong evidence. \
-  Chib (1998). Pure numpy — no C extensions.]
+  #text(size: 0.78em)[Detection: log BF > 3.5 and above bootstrap null 95th pct. \
+  Conjugate NIG marginal likelihoods. Pure numpy — no C extensions.]
 ][
   ```
-  changepoint analysis (Bayesian):
+  sup-F trend-break test (Andrews 1993):
     structural break:  1997
-    confidence:        99%   log BF = 18.0
+    bootstrap p-value: 0.006
 
-    slope before 1997:  +0.055000 C / year
-                        (1981-1996)
-    slope after  1997:  -0.000500 C / year
-                        (1997-2024)
-    trend reversed sign after 1997
+  Bayesian scan: no break detected
+
+  Mann-Kendall: p = 0.037 (significant)
+  slope: -0.021 C/yr over full 1981-2025
   ```
 
   #v(0.3em)
-  #text(size: 0.78em)[Dhaka temperature. MK sees p=0.047 (barely). \
-  The Bayesian scan shows why: two cancelling regimes.]
+  #text(size: 0.78em)[Dhaka temperature, NASA POWER 1981-2025. \
+  Sup-F and Bayesian scan have different sensitivities — both shown.]
 ]
 
 // Slide 9: AOD — Dr. Aker callback
@@ -336,7 +336,7 @@
   ```
 
   MODIS MOD08_M3 · 2002–2025 · 23 years \
-  Auto-select: block bootstrap / MKC3 / Hamed-Rao
+  Verdict: AR(1) sieve bootstrap; variants shown for comparison
 ][
   *Data: MODIS MOD08_M3 V6.1*
 
@@ -368,7 +368,7 @@
   ```
   $ tidemark analyze --location dhaka --var lst
 
-  Paris +1.5C   2066
+  local +1.0C warming   2054
   ```
 
   #v(0.8em)
