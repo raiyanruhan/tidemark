@@ -354,20 +354,30 @@ def line_residuals(Y):
     return Y - Y.mean(axis=1, keepdims=True) - slope[:, None] * tc
 
 
-def ar1_null_series(resid, n_boot, rng):
+def ar1_fit(resid):
     """
-    Bootstrap series under "one straight line + AR(1) noise": estimate phi from
-    the line residuals, resample the innovations, rebuild the AR(1) process.
-    Keeps the autocorrelation and the innovation distribution (skew included),
-    both of which otherwise pass for structural breaks. phi gets the usual
-    small-sample bias correction for a fitted linear trend, (1 + 4*phi)/n.
+    AR(1) fit to line residuals: returns (phi, centred innovations).
+    phi gets the usual small-sample bias correction for a fitted linear
+    trend, (1 + 4*phi)/n, and is clipped to [-0.95, 0.95].
     """
     r = np.asarray(resid, dtype=float)
     n = len(r)
     phi = lag1_acf(r)
     phi = float(np.clip(phi + (1.0 + 4.0 * phi) / n, -0.95, 0.95))
     innov = r[1:] - phi * r[:-1]
-    innov = innov - innov.mean()
+    return phi, innov - innov.mean()
+
+
+def ar1_null_series(resid, n_boot, rng):
+    """
+    Bootstrap series under "one straight line + AR(1) noise": estimate phi from
+    the line residuals, resample the innovations, rebuild the AR(1) process.
+    Keeps the autocorrelation and the innovation distribution (skew included),
+    both of which otherwise pass for structural breaks. See ar1_fit for phi.
+    """
+    r = np.asarray(resid, dtype=float)
+    n = len(r)
+    phi, innov = ar1_fit(r)
     burn = 20
     e = rng.choice(innov, size=(n_boot, n + burn), replace=True)
     out = np.empty_like(e)
@@ -499,13 +509,8 @@ def bocpd_analysis(annual_values, years):
     return result
 
 
-def block_bootstrap_mk_pvalue(x, n_boot=2000, seed=42):
-    """
-    Block bootstrap p-value for Mann-Kendall trend test.
-    Önöz & Bayazit 2012, Hydrol. Process. 26(23):3552-3560.
-    More accurate than Hamed-Rao for ARMA/long-memory series (soil moisture, NDVI).
-    Returns (p_value, z_score, block_len).
-    """
+def _block_bootstrap_null(x, n_boot, seed):
+    """Observed MK S, block-bootstrap null draws of S, block length."""
     rng = np.random.default_rng(seed)
     n = len(x)
 
@@ -536,6 +541,24 @@ def block_bootstrap_mk_pvalue(x, n_boot=2000, seed=42):
         resampled = np.concatenate([residuals[s:s + block_len] for s in starts])[:n]
         null_S[b] = float(np.sum(np.sign(resampled[j_idx] - resampled[i_idx])))
 
+    return S_obs, null_S, block_len
+
+
+def block_bootstrap_mk_variance(x, n_boot=2000, seed=42):
+    """Variance of S under the block-bootstrap null (what the bootstrap z uses)."""
+    _, null_S, _ = _block_bootstrap_null(x, n_boot, seed)
+    return float(np.var(null_S))
+
+
+def block_bootstrap_mk_pvalue(x, n_boot=2000, seed=42):
+    """
+    Block bootstrap p-value for Mann-Kendall trend test.
+    Önöz & Bayazit 2012, Hydrol. Process. 26(23):3552-3560.
+    More accurate than Hamed-Rao for ARMA/long-memory series (soil moisture, NDVI).
+    Returns (p_value, z_score, block_len).
+    """
+    S_obs, null_S, block_len = _block_bootstrap_null(x, n_boot, seed)
+
     p = float(np.mean(np.abs(null_S) >= abs(S_obs)))
     p = max(p, 1.0 / n_boot)
 
@@ -560,3 +583,72 @@ def run_mannkendall(vals):
     Returns the pymannkendall result object.
     """
     return mk.hamed_rao_modification_test(vals, alpha=0.05, lag=3)
+
+
+METHOD_LABELS = {
+    "hr":   "Modified Mann-Kendall (Hamed-Rao, lag=3)",
+    "mkc3": "Modified Mann-Kendall (MKC3, Then 2025)",
+}
+
+
+def select_mk_method(phi, skewness, n):
+    """Which MK variant gives the verdict: 'bb' (autocorrelated), 'mkc3' (skewed) or 'hr'."""
+    if abs(phi) > 0.3:
+        return "bb"
+    if abs(skewness) > 0.5 and n >= 20:
+        return "mkc3"
+    return "hr"
+
+
+def mk_verdict(vals, method=None):
+    """
+    The pipeline's significance verdict for one series. Single source of truth:
+    analyse() and the trajectory module both go through here.
+    method=None picks the variant from the residual autocorrelation and skew
+    (select_mk_method); pass a method key to force that variant (used to apply
+    the same test to sub-series and simulated extensions).
+    Returns dict: method, method_label, res (Hamed-Rao result: slope, intercept,
+    Tau), slope, intercept, residuals, phi, skewness, z, p, significant.
+    """
+    vals = np.asarray(vals, dtype=float)
+    n = len(vals)
+    res = run_mannkendall(vals)
+    slope, intercept = float(res.slope), float(res.intercept)
+    residuals = compute_residuals(vals, slope, intercept)
+    phi = lag1_acf(residuals)
+    skewness = float(stats.skew(residuals))
+    if method is None:
+        method = select_mk_method(phi, skewness, n)
+
+    z, p, sig = float(res.z), float(res.p), bool(res.h)
+    label = METHOD_LABELS["hr"]
+    if method == "bb":
+        bb_p, bb_z, bb_len = block_bootstrap_mk_pvalue(vals)
+        z, p, sig = round(bb_z, 4), bb_p, bool(bb_p < 0.05)
+        label = f"Block Bootstrap MK (Önöz & Bayazit 2012, block length={bb_len})"
+    elif method == "mkc3":
+        z, p, _, sig = mk_z_mkc3(vals)
+        z = round(z, 4)
+        label = METHOD_LABELS["mkc3"]
+    return {"method": method, "method_label": label, "res": res,
+            "slope": slope, "intercept": intercept, "residuals": residuals,
+            "phi": phi, "skewness": skewness, "z": z, "p": p, "significant": sig}
+
+
+def mk_variance_inflation(vals, method, residuals):
+    """
+    Var(S) of the given MK variant divided by the IID variance n(n-1)(2n+5)/18,
+    for the observed series. This is the autocorrelation/skew correction the
+    verdict applies, estimated once so a simulation can reuse it at every n
+    without re-running a bootstrap per step.
+    """
+    n = len(vals)
+    var0 = n * (n - 1) * (2 * n + 5) / 18.0
+    if method == "bb":
+        var = block_bootstrap_mk_variance(vals)
+    elif method == "mkc3":
+        var = mkc3_variance(residuals, n)
+    else:
+        var = float(mk.hamed_rao_modification_test(vals, alpha=0.05, lag=3).var_s)
+    k = var / var0 if var > 0 else 1.0
+    return float(np.clip(k, 0.5, 20.0))

@@ -48,9 +48,9 @@ from fetch       import (APPEEARS_PARAMS, COMPOUND_PARAMS, LAADS_PARAMS,
 from milestones  import compute_milestones
 from records     import record_rate
 from seasonal    import run_seasonal_mk
-from stats       import (block_bootstrap_mk_pvalue, bocpd_analysis, compute_eprocess,
-                         compute_efficiency_metrics, compute_residuals, detection_floor,
-                         ita_analysis, lag1_acf, mk_z_mkc3, partial_mk, run_mannkendall)
+from stats       import (bocpd_analysis, compute_eprocess,
+                         compute_efficiency_metrics, detection_floor,
+                         ita_analysis, mk_verdict, partial_mk)
 from trajectory  import compute_pvalue_series, compute_trajectory
 
 
@@ -76,39 +76,23 @@ def analyse(vals, years, param, last_year, monthly_by_year=None, progress=None, 
         if progress:
             progress(msg)
 
-    from scipy.stats import skew as _skew
-
     n   = len(vals)
     emit("running Mann-Kendall test...")
-    res = run_mannkendall(vals)
+    v           = mk_verdict(vals)
+    res         = v["res"]
 
-    slope       = float(res.slope)
-    intercept   = float(res.intercept)
+    slope       = v["slope"]
+    intercept   = v["intercept"]
     tau         = float(res.Tau)
-    z_score     = float(res.z)
-    p_value     = float(res.p)
-    significant = bool(res.h)
+    z_score     = v["z"]
+    p_value     = v["p"]
+    significant = v["significant"]
     direction   = "upward" if slope >= 0 else "downward"
 
-    residuals   = compute_residuals(vals, slope, intercept)
+    residuals   = v["residuals"]
     sigma_n     = float(np.std(residuals, ddof=1))
-    phi         = lag1_acf(residuals)
-
-    skewness = float(_skew(residuals))
-    if abs(phi) > 0.3:
-        bb_p, bb_z, bb_len = block_bootstrap_mk_pvalue(vals)
-        z_score     = round(bb_z, 4)
-        p_value     = bb_p
-        significant = bool(bb_p < 0.05)
-        method      = f"Block Bootstrap MK (Önöz & Bayazit 2012, block length={bb_len})"
-    elif abs(skewness) > 0.5 and n >= 20:
-        mkc3_z, mkc3_p, _, mkc3_sig = mk_z_mkc3(vals)
-        z_score     = round(mkc3_z, 4)
-        p_value     = mkc3_p
-        significant = mkc3_sig
-        method      = "Modified Mann-Kendall (MKC3, Then 2025)"
-    else:
-        method = "Modified Mann-Kendall (Hamed-Rao, lag=3)"
+    phi         = v["phi"]
+    method      = v["method_label"]
 
     floor       = detection_floor(sigma_n, n)
     floor_ratio = abs(slope) / floor if floor > 1e-12 else 0.0
