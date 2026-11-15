@@ -203,4 +203,12 @@ interpretation: anthropogenic drying trend exists but is masked by ENSO
 
 - **R:** `trend::partial.mk.test` — implemented
 - **Python:** not in pymannkendall, not in scipy
-- **Tidemark:** not yet implemented
+- **Tidemark:** implemented
+
+Tidemark implementation uses the Libiseller & Grimvall (2002) h_k formula directly
+(not the τ_partial form above). Key detail: `h_k(x) = -rowsum(sign(xd))[k]` where
+`xd[i,j] = x[j] - x[i]`. See `python/stats.py:partial_mk()`.
+
+Wired in `python/analyze.py` and `python/app.py`: ENSO (MEI v2 from `fetch_enso()`)
+is fetched once and passed as `oni=` to `analyse()`. Partial MK runs when ENSO coverage
+≥ 80% of analysis years. Output in `src/output.rs:print_partial_mk_line()`.

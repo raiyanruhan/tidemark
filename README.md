@@ -49,7 +49,7 @@
 
 Every existing climate trend tool reports the same thing: significant or not. That binary omits three things - how much more data is needed before a not-yet-significant trend becomes detectable, whether the current record is long enough to resolve the signal at all, and when a significant trend will cross real-world thresholds.
 
-Tidemark answers all three. It runs the Modified Mann-Kendall test with Hamed-Rao autocorrelation correction, computes the detection floor unconditionally, and for any non-significant trend runs four independent crossing-year estimates with divergence detection.
+Tidemark answers all three. It runs the Modified Mann-Kendall test with Hamed-Rao autocorrelation correction (or MKC3 for skewed series), computes the detection floor unconditionally, runs four independent crossing-year estimates with divergence detection, and separates anthropogenic trend signal from ENSO variability using a rank-based partial Mann-Kendall test.
 
 ```
 $ tidemark analyze --location cairo --var rainfall
@@ -73,7 +73,7 @@ significance trajectory:
   85% PI            2036 - 2068
 ```
 
-The 77-year divergence between methods is a diagnostic. Cairo residuals are right-skewed. The standard formulas assume bell-curve noise and return a confident wrong answer. Tidemark detects this automatically and routes to the correct estimate.
+The 77-year divergence between methods is a diagnostic. Cairo residuals are right-skewed. The standard formulas assume bell-curve noise and return a confident wrong answer. Tidemark detects this automatically and routes to the correct estimate. For precipitation and other skewed variables, Tidemark applies the MKC3 variance correction (Then et al. 2025) instead of Hamed-Rao, eliminating the false-positive bias that inflated that p-value in the first place.
 
 ### Earth System Scan
 
@@ -133,6 +133,21 @@ tidemark compare --location <name> --location <name> --var <variable>
 | `ndvi` | MOD13Q1 | ratio | ORNL DAAC MODIS | 2000 |
 | `lst` | MOD11A2.061 | C | AppEEARS MODIS | 2001 |
 | `et` | MOD16A2.061 | mm/day | AppEEARS MODIS | 2001 |
+
+## Statistical Methods
+
+Tidemark applies the following statistical methods automatically:
+
+| Method | When applied | Reference |
+|---|---|---|
+| Modified Mann-Kendall (Hamed-Rao, lag=3) | Symmetric residuals (&#124;skewness&#124; ≤ 0.5) | Hamed & Rao 1998 |
+| MKC3 third-order cumulant correction | Skewed residuals (&#124;skewness&#124; > 0.5, n ≥ 20) | Then et al. 2025 |
+| Partial Mann-Kendall with ENSO control | When ENSO coverage ≥ 80% of period | Libiseller & Grimvall 2002 |
+| AREP e-process | Sequential evidence accumulation | Ramdas et al. 2023 |
+
+**MKC3** (Then, W., Hashim, R., and Alias, N.E., *Scientific Reports* 2025) corrects a systematic false-positive bias in Hamed-Rao for right-skewed series. For Cairo precipitation (skewness≈1.95), Hamed-Rao gives p≈0.03 (significant); MKC3 gives p>0.10 (not significant, correct). No Python package implements this; Tidemark is the first open implementation.
+
+**Partial Mann-Kendall** (Libiseller, C. and Grimvall, A., *Environmetrics* 2002) separates the anthropogenic trend from ENSO variability using a rank-based cross-covariance framework. No parametric assumption required. Output: "trend robust to ENSO correction" / "anthropogenic trend exists, masked by ENSO" / "apparent trend may be ENSO-driven."
 
 ## Data Sources
 

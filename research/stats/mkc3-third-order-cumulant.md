@@ -151,9 +151,14 @@ def mk_z_mkc3(x):
 ## Implementation status
 
 - **Published:** 2025 (Malaysia regional precipitation application only)
-- **Python:** No package. The code above is the full implementation.
+- **Python:** No package. Tidemark is first open implementation.
 - **R:** No package.
-- **Tidemark:** Not yet implemented. Target: replace Hamed-Rao for skewed residuals.
+- **Tidemark:** Implemented.
+
+Implemented as `mkc3_variance(residuals, n)` and `mk_z_mkc3(vals)` in `python/stats.py`.
+Dispatch in `python/analyze.py`: `abs(skew(residuals)) > 0.5 and n >= 20` triggers MKC3;
+else Hamed-Rao. Output: `src/output.rs` reads `json["method"]` and prints on the `test`
+line. Result HTML shows "Test method" row in the stats table.
 
 ---
 

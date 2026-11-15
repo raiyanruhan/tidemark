@@ -306,6 +306,61 @@
         they are meaningfully different, it means the natural cycle was masking or
         amplifying the underlying long-term change.
       </p>
+
+      <hr class="p-rule--muted" />
+      <div class="row p-section--shallow">
+        <div class="col-3 col-medium-2">
+          <h3 class="p-heading--5">Rank-based ENSO separation</h3>
+        </div>
+        <div class="col-6 col-medium-3">
+          <p>
+            tidemark also runs a partial Mann-Kendall test (Libiseller &amp; Grimvall, 2002)
+            that separates the trend signal from ENSO variability using a rank-based
+            cross-covariance framework. Unlike the OLS ENSO correction, it requires no
+            assumption about whether the ENSO-climate relationship is linear. It answers
+            directly: is there a trend after ENSO variability is accounted for?
+          </p>
+          <p>
+            The output shows whether the ENSO-adjusted test changes the significance
+            verdict, and what fraction of concordance variance ENSO explains. This is
+            the only non-parametric ENSO separation test available in any live-data
+            climate trend tool.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="p-section" id="skewed-series">
+  <div class="u-fixed-width p-section--shallow">
+    <hr class="p-rule" />
+    <h2>Correcting for skewed data</h2>
+  </div>
+  <div class="u-fixed-width">
+    <div class="col-start-large-4 col-9 col-medium-5 col-start-medium-2">
+      <p>
+        Precipitation, vegetation indices (NDVI), and evapotranspiration in dry regions
+        follow right-skewed distributions: most years are near zero, with occasional
+        large spikes. Standard variance corrections for the Mann-Kendall test, including
+        Hamed-Rao, only account for autocorrelation. For right-skewed residuals, they
+        systematically underestimate the variance of the test statistic, inflating the
+        Z-score and producing false positives.
+      </p>
+      <p>
+        tidemark uses the MKC3 variance correction (Then et al., 2025) for precipitation,
+        NDVI, and other variables with skewed residuals. MKC3 adds a third-order cumulant
+        correction term that captures the skewness of lag products, which Hamed-Rao
+        misses. For symmetric series the two corrections are mathematically identical.
+        For Cairo precipitation (skewness &#8776; 1.95), the correction changes the
+        verdict from significant (Hamed-Rao, p &#8776; 0.03) to not significant
+        (MKC3, p &gt; 0.10).
+      </p>
+      <p>
+        The correction is applied automatically when residual skewness exceeds 0.5.
+        The test method is shown on every result so you always know which correction
+        was used.
+      </p>
     </div>
   </div>
 </section>

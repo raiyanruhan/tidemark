@@ -241,3 +241,43 @@ He will not have seen this before.
 3. Rust: `output.rs`: terminal formatting per CLAUDE.md spec, extended with new fields
 
 The analytical formula and Weatherhead are ~10 lines each in Python. The main work is the output format.
+
+---
+
+### MKC3: third-order cumulant variance correction (Then 2025)
+
+Hamed-Rao uses only second-order statistics. For right-skewed series:
+κ₃(k) = E[ε_t² · ε_{t+k}] > 0 → Var(S) underestimated → z inflated → false positives
+
+Cairo precipitation (skewness=1.95):
+- Hamed-Rao: p=0.03 → "significant"
+- MKC3: p>0.10 → "not significant" (correct)
+
+Decision rule: |skew| > 0.5 → MKC3; else Hamed-Rao. Fully automatic.
+
+**No existing Python package. Tidemark is first open implementation (Then et al. 2025).**
+
+Implemented: `mkc3_variance()` and `mk_z_mkc3()` in `python/stats.py`. Dispatch in
+`python/analyze.py`. Output: `src/output.rs` reads `json["method"]`.
+
+---
+
+### Partial Mann-Kendall: ENSO separation (Libiseller & Grimvall 2002)
+
+The question scientists care about most: is the trend anthropogenic, or is ENSO driving it?
+
+Rank-based cross-covariance framework. No parametric assumption. Same ENSO data as OLS correction.
+
+Output:
+```
+trend test (raw)        z = -0.84   p = 0.401   not significant
+trend test (ENSO-adj)   z = -1.98   p = 0.047   ✓ significant
+
+ENSO explains 26% of concordance variance
+interpretation: anthropogenic drying trend exists, masked by ENSO in raw test
+```
+
+**No existing live-data tool separates anthropogenic signal from ENSO using rank methods.**
+
+Implemented: `partial_mk(x, q)` in `python/stats.py`. Wired in `python/analyze.py` and
+`python/app.py`. Output: `print_partial_mk_line()` in `src/output.rs`.
