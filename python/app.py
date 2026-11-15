@@ -319,7 +319,13 @@ def _run_full(lat, lon, code, start, end, progress=None, cancel=None):
     last_year = years[-1]
 
     emit(f"{len(vals)} years of data received ({years[0]}-{last_year})")
-    result = analyse(vals, years, code, last_year, monthly_by_year, progress=progress, cancel=cancel)
+    emit("fetching ENSO index from NOAA...")
+    check_cancel()
+    enso_annual, enso_source = fetch_enso(years)
+    oni_for_pmk = enso_annual if len(enso_annual) >= len(years) * 0.8 else None
+
+    result = analyse(vals, years, code, last_year, monthly_by_year,
+                     progress=progress, cancel=cancel, oni=oni_for_pmk)
 
     check_cancel()
 
@@ -330,10 +336,6 @@ def _run_full(lat, lon, code, start, end, progress=None, cancel=None):
         "annual_years": years,
         "annual_vals":  [round(float(v), 4) for v in vals],
     })
-
-    emit("fetching ENSO index from NOAA...")
-    check_cancel()
-    enso_annual, enso_source = fetch_enso(years)
     if enso_annual:
         corrected_vals, attribution = enso_correct(vals, years, enso_annual)
         if corrected_vals is not None:

@@ -139,6 +139,132 @@ def compute_arep(vals, residuals, slope, phi, efficiency):
     }
 
 
+def mkc3_variance(residuals, n):
+    """
+    MKC3 variance of Mann-Kendall S-statistic (Then et al., Sci. Rep. 2025).
+    Var_MKC3(S) = Var_HR(S) + 2 * sum_{k=1}^{n-1} (n-k) * w_k * kappa3_k
+    where kappa3_k = mean(eps[:-k]^2 * eps[k:])  (third-order lag-k cumulant).
+    Returns var_hr as fallback if correction produces non-positive result.
+    """
+    eps = residuals - float(np.mean(residuals))
+    n = len(eps)
+
+    rho = []
+    for k in range(1, n):
+        if n - k < 2:
+            rho.append(0.0)
+        else:
+            r = float(np.corrcoef(eps[:-k], eps[k:])[0, 1])
+            rho.append(0.0 if math.isnan(r) else r)
+    rho = np.array(rho)
+
+    n_star_inv = 1.0
+    for k in range(1, n):
+        w = 1.0 - k / (n + 1)
+        n_star_inv += (2.0 / n) * (n - k) * w * rho[k - 1]
+
+    var0 = n * (n - 1) * (2 * n + 5) / 18.0
+    var_hr = var0 * n_star_inv
+
+    C3 = 0.0
+    for k in range(1, n):
+        kappa3_k = float(np.mean(eps[:-k] ** 2 * eps[k:]))
+        w = 1.0 - k / (n + 1)
+        C3 += (n - k) * w * kappa3_k
+
+    var_mkc3 = var_hr + 2.0 * C3
+    return var_mkc3 if var_mkc3 > 0 else var_hr
+
+
+def mk_z_mkc3(vals):
+    """
+    Mann-Kendall z-score using MKC3 variance correction (Then et al. 2025).
+    Returns (z, p_value, slope, significant).
+    """
+    from scipy.stats import norm as _norm
+    n = len(vals)
+    t = np.arange(n, dtype=float)
+
+    # S statistic
+    S = 0.0
+    for i in range(n - 1):
+        for j in range(i + 1, n):
+            S += float(np.sign(vals[j] - vals[i]))
+
+    # Sen slope + residuals
+    slopes = [(vals[j] - vals[i]) / (j - i) for i in range(n - 1) for j in range(i + 1, n)]
+    slope = float(np.median(slopes))
+    residuals = vals - slope * t
+
+    var_s = mkc3_variance(residuals, n)
+    if var_s <= 0:
+        var_s = n * (n - 1) * (2 * n + 5) / 18.0
+
+    if S > 0:
+        z = (S - 1.0) / math.sqrt(var_s)
+    elif S < 0:
+        z = (S + 1.0) / math.sqrt(var_s)
+    else:
+        z = 0.0
+
+    p = float(2.0 * _norm.sf(abs(z)))
+    significant = p < 0.05
+    return z, p, slope, significant
+
+
+def partial_mk(x, q):
+    """
+    Partial Mann-Kendall test of x controlling for covariate q.
+    Libiseller & Grimvall (2002), Water Resources Research, 38(6), 1–8.
+
+    Removes the effect of covariate q from the concordance structure of x
+    using the variance-covariance formula:
+      sigma_xq = sum_k h_k(x)*h_k(q) / 3
+      h_k(x) = sum_{j!=k} sign(x_k - x_j)   (net concordance of obs k)
+
+    Returns dict with z, p, significant, enso_fraction, or None.
+    """
+    n = len(x)
+    if n < 10:
+        return None
+
+    xd = x[None, :] - x[:, None]   # xd[i,j] = x[j] - x[i]
+    qd = q[None, :] - q[:, None]
+
+    # S statistics: sum of signs of upper triangle (j > i means later time)
+    S_x = float(np.sum(np.sign(np.triu(xd, k=1))))
+    S_q = float(np.sum(np.sign(np.triu(qd, k=1))))
+
+    # h_k(x)[k] = sum_{j!=k} sign(x_k - x_j) = -rowsum(sign(xd))[k]
+    # since xd[k,j]=x[j]-x[k], sign(xd[k,j])=sign(x[j]-x[k])=-sign(x[k]-x[j])
+    h_x = -np.sum(np.sign(xd), axis=1).astype(float)
+    h_q = -np.sum(np.sign(qd), axis=1).astype(float)
+
+    sigma_xx = float(np.dot(h_x, h_x)) / 3.0
+    sigma_qq = float(np.dot(h_q, h_q)) / 3.0
+    sigma_xq = float(np.dot(h_x, h_q)) / 3.0
+
+    if sigma_qq < 1e-10 or sigma_xx < 1e-10:
+        return None
+
+    S_partial = S_x - (sigma_xq / sigma_qq) * S_q
+    var_partial = sigma_xx - sigma_xq ** 2 / sigma_qq
+
+    if var_partial <= 0.0:
+        return None
+
+    z = S_partial / math.sqrt(var_partial)
+    p = 2.0 * float(stats.norm.sf(abs(z)))
+    enso_fraction = sigma_xq ** 2 / (sigma_xx * sigma_qq)
+
+    return {
+        "z":             round(z, 4),
+        "p":             round(p, 6),
+        "significant":   bool(p < 0.05),
+        "enso_fraction": round(enso_fraction, 4),
+    }
+
+
 def run_mannkendall(vals):
     """
     Hamed-Rao modified Mann-Kendall test (lag=3).

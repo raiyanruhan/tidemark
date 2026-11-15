@@ -146,6 +146,54 @@ def fetch_annual_multi(lat, lon, params, start, end):
     }
 
 
+NOAA_ONI_URL = "https://www.cpc.noaa.gov/data/indices/oni.ascii.txt"
+
+
+def fetch_oni_annual(years):
+    """
+    Fetch NOAA CPC ONI (Oceanic Niño Index) annual means for the given years.
+    Handles two file formats:
+      Format A: year-first rows  (year  val1  val2  ... val12)
+      Format B: season-first rows (SEAS  YR  TOTAL  ANOM)
+    Returns {year: float} with annual mean ONI anomaly, or {} on failure.
+    """
+    try:
+        resp = requests.get(NOAA_ONI_URL, timeout=15, verify=False)
+        resp.raise_for_status()
+    except Exception:
+        return {}
+
+    year_set = set(years)
+    accumulate = {}   # {year: [anom, ...]}
+    for line in resp.text.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        parts = line.split()
+        if not parts:
+            continue
+        # Format A: first token is 4-digit year, rest are anomalies
+        if parts[0].lstrip('-').isdigit() and len(parts[0]) == 4:
+            try:
+                yr = int(parts[0])
+                vals = [float(x) for x in parts[1:] if abs(float(x)) < 50.0]
+                if yr in year_set and vals:
+                    accumulate[yr] = vals
+            except (ValueError, IndexError):
+                continue
+        # Format B: second token is 4-digit year, fourth token is anomaly
+        elif len(parts) >= 4 and parts[1].isdigit() and len(parts[1]) == 4:
+            try:
+                yr = int(parts[1])
+                anom = float(parts[3])
+                if yr in year_set and abs(anom) < 50.0:
+                    accumulate.setdefault(yr, []).append(anom)
+            except (ValueError, IndexError):
+                continue
+
+    return {yr: float(np.mean(vals)) for yr, vals in accumulate.items()}
+
+
 def compute_compound_series(lat, lon, var, start, end):
     """
     VPD: es(T) * (1 - RH/100), Tetens/Buck (1981) formula, kPa.

@@ -126,6 +126,12 @@
                 <td><span class="tip" data-tip="How many standard deviations the trend is from zero. Values above 1.96 or below -1.96 cross the significance threshold.">Z-score</span></td>
                 <td class="num">{{ '%.4f' | format(r.z_score) }}</td>
               </tr>
+              {% if r.method %}
+              <tr>
+                <td><span class="tip" data-tip="MKC3 (Then et al. 2025) corrects for third-order cumulants in skewed residuals (|skewness| > 0.5), reducing false positives in precipitation, NDVI and ET data. For near-Gaussian series, Hamed-Rao is used.">Test method</span></td>
+                <td class="num" style="font-size:0.85em">{{ r.method }}</td>
+              </tr>
+              {% endif %}
               <tr>
                 <td><span class="tip" data-tip="The probability that this pattern could appear by chance in data with no real trend. Below 0.05 is the standard threshold for calling a trend statistically significant.">p-value</span></td>
                 <td class="num">{{ '%.6f' | format(r.p_value) }}</td>
@@ -134,6 +140,25 @@
               <tr>
                 <td><span class="tip" data-tip="An anytime-valid alternative to the p-value. E_n >= 20 means significant at α=0.05, and stays valid even if you check every year — no Bonferroni correction needed. Unlike p-values, you can peek at this number at any time without inflating the false positive rate.">E-process (AREP)</span></td>
                 <td class="num">E_n = {{ '%.1f'|format(r.e_process.E_n) }}{% if r.e_process.significant %} ✓{% endif %} &nbsp;/ {{ r.e_process.threshold }}</td>
+              </tr>
+              {% endif %}
+              {% if r.partial_mk %}
+              <tr>
+                <td colspan="2" style="padding-top:0.5em;padding-bottom:0.2em">
+                  <span class="tip" data-tip="Partial Mann-Kendall: tests for trend in this variable after removing the effect of ENSO variability. The raw z-score uses all variance; the ENSO-adjusted z-score controls for the contemporaneous ENSO index (NOAA CPC ONI). Libiseller & Grimvall (2002).">ENSO-partial Mann-Kendall</span>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding-left:1em">raw z / p</td>
+                <td class="num">z = {{ '%.2f'|format(r.partial_mk.z_raw) }} &nbsp; p = {{ '%.4f'|format(r.partial_mk.p_raw) }}{% if r.partial_mk.significant_raw %} ✓{% endif %}</td>
+              </tr>
+              <tr>
+                <td style="padding-left:1em">ENSO-adjusted z / p</td>
+                <td class="num">z = {{ '%.2f'|format(r.partial_mk.z) }} &nbsp; p = {{ '%.4f'|format(r.partial_mk.p) }}{% if r.partial_mk.significant %} ✓{% endif %}</td>
+              </tr>
+              <tr>
+                <td style="padding-left:1em">ENSO concordance share</td>
+                <td class="num">{{ '%.0f'|format(r.partial_mk.enso_fraction * 100) }}%</td>
               </tr>
               {% endif %}
             </table>

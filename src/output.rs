@@ -17,7 +17,9 @@ pub fn print_result(config: &Config, json: &serde_json::Value) {
     print_location(config, json);
     println!("{:<12}{} ({}, {})", "variable", config.var_label, config.param, config.unit);
     println!("{:<12}{} - {}  ({} years)", "period", start_year, end_year, n_years);
-    println!("{:<12}Modified Mann-Kendall (Hamed-Rao, lag=3)", "test");
+    let method = json["method"].as_str()
+        .unwrap_or("Modified Mann-Kendall (Hamed-Rao, lag=3)");
+    println!("{:<12}{}", "test", method);
 
     println!();
     println!("{:<12}{} {} / year", "trend", fmt_slope(slope), config.unit);
@@ -26,6 +28,7 @@ pub fn print_result(config: &Config, json: &serde_json::Value) {
     println!("{:<12}{:.2}", "z-score", z_score);
     print_pvalue_line(p_value, significant);
     print_eprocess_line(&json["e_process"]);
+    print_partial_mk_line(&json["partial_mk"], direction);
     print_floor_line(floor, floor_ratio, &config.unit);
     print_efficiency_line(&json["efficiency"]);
     print_changepoint_line(&json["changepoint"]);
@@ -230,6 +233,36 @@ fn print_eprocess_line(ep: &serde_json::Value) {
         println!("{:<12}note: autocorrelation phi>0.4, e-process is approximate, interpret with p-value",
             "");
     }
+}
+
+fn print_partial_mk_line(pmk: &serde_json::Value, direction: &str) {
+    let z_raw = match pmk["z_raw"].as_f64() { Some(v) => v, None => return };
+    let p_raw = match pmk["p_raw"].as_f64() { Some(v) => v, None => return };
+    let z_adj = match pmk["z"].as_f64()     { Some(v) => v, None => return };
+    let p_adj = match pmk["p"].as_f64()     { Some(v) => v, None => return };
+    let sig_raw = pmk["significant_raw"].as_bool().unwrap_or(false);
+    let sig_adj = pmk["significant"].as_bool().unwrap_or(false);
+    let fraction = pmk["enso_fraction"].as_f64().unwrap_or(0.0);
+
+    println!();
+    println!("{:<24}z = {:.2}   p = {}   {}",
+        "trend test (raw)", z_raw, fmt_pvalue(p_raw),
+        if sig_raw { "\u{2713} significant" } else { "not significant" });
+    println!("{:<24}z = {:.2}   p = {}   {}",
+        "trend test (ENSO-adj)", z_adj, fmt_pvalue(p_adj),
+        if sig_adj { "\u{2713} significant" } else { "not significant" });
+    println!();
+    println!("ENSO explains {:.0}% of concordance variance", fraction * 100.0);
+
+    let interp = match (sig_raw, sig_adj, direction) {
+        (false, true, "upward")   => "anthropogenic increasing trend exists, masked by ENSO in raw test",
+        (false, true, "downward") => "anthropogenic declining trend exists, masked by ENSO in raw test",
+        (false, true, _)          => "anthropogenic trend exists, masked by ENSO in raw test",
+        (true, false, _)          => "apparent trend may be ENSO-driven, not anthropogenic",
+        (true, true, _)           => "trend robust to ENSO correction",
+        _                         => "no significant trend, ENSO not explanatory",
+    };
+    println!("interpretation: {}", interp);
 }
 
 fn print_floor_line(floor: f64, ratio: f64, unit: &str) {

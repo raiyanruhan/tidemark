@@ -44,12 +44,13 @@ from changepoint import pettitt_changepoint
 from decompose   import enso_correct, fetch_enso
 from fetch       import (APPEEARS_PARAMS, COMPOUND_PARAMS, MODIS_PARAMS,
                          compute_compound_series, fetch_monthly,
-                         monthly_to_annual, monthly_to_annual_min)
+                         fetch_oni_annual, monthly_to_annual, monthly_to_annual_min)
 from milestones  import compute_milestones
 from records     import record_rate
 from seasonal    import run_seasonal_mk
 from stats       import (compute_arep, compute_efficiency_metrics, compute_residuals,
-                         detection_floor, lag1_acf, run_mannkendall)
+                         detection_floor, lag1_acf, mk_z_mkc3, partial_mk,
+                         run_mannkendall)
 from trajectory  import compute_pvalue_series, compute_trajectory
 
 
@@ -65,7 +66,7 @@ def parse_args():
     return p.parse_args()
 
 
-def analyse(vals, years, param, last_year, monthly_by_year=None, progress=None, cancel=None):
+def analyse(vals, years, param, last_year, monthly_by_year=None, progress=None, cancel=None, oni=None):
     """
     Run the full Mann-Kendall pipeline on vals.
     Returns a result dict. monthly_by_year is optional (needed for seasonal).
@@ -74,6 +75,8 @@ def analyse(vals, years, param, last_year, monthly_by_year=None, progress=None, 
     def emit(msg):
         if progress:
             progress(msg)
+
+    from scipy.stats import skew as _skew
 
     n   = len(vals)
     emit("running Mann-Kendall test...")
@@ -91,11 +94,35 @@ def analyse(vals, years, param, last_year, monthly_by_year=None, progress=None, 
     sigma_n     = float(np.std(residuals, ddof=1))
     phi         = lag1_acf(residuals)
 
+    skewness = float(_skew(residuals))
+    if abs(skewness) > 0.5 and n >= 20:
+        mkc3_z, mkc3_p, _, mkc3_sig = mk_z_mkc3(vals)
+        z_score     = round(mkc3_z, 4)
+        p_value     = mkc3_p
+        significant = mkc3_sig
+        method      = "Modified Mann-Kendall (MKC3, Then 2025)"
+    else:
+        method = "Modified Mann-Kendall (Hamed-Rao, lag=3)"
+
     floor       = detection_floor(sigma_n, n)
     floor_ratio = abs(slope) / floor if floor > 1e-12 else 0.0
     eff         = compute_efficiency_metrics(residuals)
 
     arep        = compute_arep(vals, residuals, slope, phi, eff)
+
+    pmk = None
+    if oni is not None:
+        oni_aligned = np.array([oni[yr] for yr in years if yr in oni])
+        idx_aligned = [i for i, yr in enumerate(years) if yr in oni]
+        if len(idx_aligned) >= max(15, int(n * 0.8)):
+            vals_aligned = vals[idx_aligned]
+            pmk_raw = partial_mk(vals_aligned, oni_aligned)
+            if pmk_raw is not None:
+                pmk = pmk_raw
+                pmk["z_raw"]           = round(z_score, 4)
+                pmk["p_raw"]           = round(p_value, 6)
+                pmk["significant_raw"] = significant
+
     cp_detected, cp_idx, cp_p = pettitt_changepoint(vals)
     obs_r, exp_r, rec_ratio   = record_rate(vals, direction)
     seasonal                  = run_seasonal_mk(monthly_by_year) if monthly_by_year else {}
@@ -108,6 +135,8 @@ def analyse(vals, years, param, last_year, monthly_by_year=None, progress=None, 
         "z_score":         round(z_score, 4),
         "p_value":         p_value,
         "significant":     significant,
+        "method":          method,
+        "partial_mk":      pmk,
         "sigma_n":         sigma_n,
         "phi":             round(phi, 4),
         "detection_floor": floor,
@@ -171,8 +200,12 @@ def main():
     vals      = np.array([v for _, v in annual])
     last_year = years[-1]
 
+    # --- ENSO index (MEI v2 or ONI fallback) — shared by ENSO correction and partial MK ---
+    enso_annual, enso_source = fetch_enso(years)
+    oni_for_pmk = enso_annual if len(enso_annual) >= len(years) * 0.8 else None
+
     # --- raw analysis ---
-    result = analyse(vals, years, args.var, last_year, monthly_by_year)
+    result = analyse(vals, years, args.var, last_year, monthly_by_year, oni=oni_for_pmk)
     result.update({
         "lat":        args.lat,
         "lon":        args.lon,
@@ -186,7 +219,6 @@ def main():
     # Regresses out ENSO (El Nino-Southern Oscillation) variability to isolate
     # the anthropogenic forced trend from natural interannual oscillations.
     # Source: NOAA MEI v2 (Wolter & Timlin 2011, doi:10.1002/joc.2336).
-    enso_annual, enso_source = fetch_enso(years)
     if enso_annual:
         corrected_vals, attribution = enso_correct(vals, years, enso_annual)
         if corrected_vals is not None:
