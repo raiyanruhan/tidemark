@@ -5,67 +5,35 @@
 
 ---
 
-## Why Hamed-Rao fails for skewed series
+## Verified against the paper (2026-11-15, PMC12775442)
 
-Hamed-Rao and all existing variance corrections (Yue-Wang, TFPW) use only second-order
-statistics — the lag-k autocorrelation ρ_k. They assume the correction term is fully captured by:
-
-```
-Var_HR(S) = Var_0(S) · (n/n*) · correction(ρ_k)
-```
-
-This is correct when residuals are symmetric. For right-skewed series (precipitation,
-NDVI, ET in arid regions), the skewness of lag products introduces an additional systematic
-bias into Var(S) that ρ_k cannot capture. Result: Var(S) is underestimated → z-score inflated
-→ false positives.
-
-Empirical evidence: for Cairo precipitation (skewness ≈ 1.95), Hamed-Rao gives p ≈ 0.03
-when the true p under the correct distribution is > 0.10. This is not noise — it is a
-structural flaw for all right-skewed residual distributions.
-
----
-
-## MKC3 formulation
-
-The third-order cumulant of the lag-k product is:
+Then & Abdul Halim, Sci. Rep. 16, 500 (2025). Open access, equations are images on PMC.
+The earlier version of this note (skewness argument, kappa3(k) = E[eps_t^2 eps_{t+k}],
+additive 2/n^2 * sum (n-k) w_k kappa3(k), Bartlett weights, lag cutoff 3) is NOT in the paper.
 
 ```
-κ₃(k) = E[(x_t - μ)²(x_{t+k} - μ)] - 2·ρ_k·σ²·μ   [third cumulant of lag-k pairs]
+Eq 18  n/n*_s = 1 + 2 * sum_{i=1}^{n-1} (n-i)(n-i-1)(n-i-2) rho_s(i) / (n(n-1)(n-2))
+       rho_s = lag-i autocorrelation of rank-detrended data (MKRD = Hamed-Rao 1998);
+       pymannkendall default: all lags, keep only |rho| > z_.975/sqrt(n)
+Eq 19  C3(t1,t2) = E[x(t) x(t+t1) x(t+t2)]            zero-mean stationary series
+Eq 20  C3 estimator, detrended + standardized series, max lag M
+Eq 21  Phi_3 = 1/(N-2) * sum_{k=1}^{N-2} x(t_k) x(t_k+1) x(t_k+2)     lags (1,2)
+Eq 22  n/n*' = n/n*_s + Phi_3
+Eq 23  Var'(S) = Var(S) * n/n*'
 ```
 
-For zero-mean residuals (after trend removal):
+Z uses Var'(S) in place of the MKRD variance (their Eq 8). Phi_3 is dimensionless
+(standardized), so it multiplies the IID variance, not an additive data-unit term.
 
-```
-κ₃(k) = E[ε_t² · ε_{t+k}]   (k ≠ 0)
-κ₃(0) = E[ε_t³] = γ₁ · σ³   (skewness × cube of std dev)
-```
+Ambiguity: prose says "the rank-detrended data are standardized" before Eq 21, the
+estimator text says "detrended and standardized". Code uses standardized ranks.
+Both readings give the same null rejection rates within Monte Carlo error.
 
-The corrected variance is:
-
-```
-Var_MKC3(S) = Var_HR(S) + C₃
-```
-
-where the third-order correction term C₃ is:
-
-```
-C₃ = (2/n²) · Σ_{k=1}^{n-1} (n-k) · w_k · κ₃(k)
-```
-
-and w_k are weights analogous to the Hamed-Rao lag weights:
-
-```
-w_k = 1 - k/(n+1)   [Bartlett taper, same as HR]
-```
-
-The sample estimator of κ₃(k) from residuals ε̂_t:
-
-```
-κ̂₃(k) = (1/n) · Σ_{t=1}^{n-k} ε̂_t² · ε̂_{t+k}
-```
-
-For symmetric distributions: κ₃(k) = 0 for all k → MKC3 reduces exactly to Hamed-Rao.
-For right-skewed: κ₃(k) > 0 → Var_MKC3 > Var_HR → smaller z → fewer false positives.
+The paper does not motivate the term by skewness; it targets nonlinearity ("if
+nonlinearity does not exist, the third-order cumulant is zero"). Its own Table 4 reports
+Type I error of 0.09-0.37 for MKC3 (n=30..200), and states MKC3 does not do well at n=30.
+Null false-positive rates for skewed (lognormal) noise are in the commit message; MKC3 as
+published is anti-conservative at n<=60, more so than the previous implementation.
 
 ---
 

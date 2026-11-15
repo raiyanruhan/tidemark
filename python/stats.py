@@ -171,50 +171,47 @@ def compute_eprocess(vals):
 
 def mkc3_variance(residuals, n):
     """
-    MKC3 variance of Mann-Kendall S-statistic (Then et al., Sci. Rep. 2025).
-    Var_MKC3(S) = Var_HR(S) + 2 * sum_{k=1}^{lag_max} (n-k) * w_k * kappa3_k
-    where kappa3_k = mean(eps[:-k]^2 * eps[k:])  (third-order lag-k cumulant).
+    MKC3 variance of the Mann-Kendall S-statistic, Then & Abdul Halim,
+    Sci. Rep. 16, 500 (2025), doi:10.1038/s41598-025-30034-0 (PMC12775442).
 
-    Lag cutoff: same lag=3 convention as hamed_rao_modification_test.
-    Using all n-1 lags on short series (n~45) causes noisy high-lag autocorrelation
-    estimates to make n_star_inv negative → invalid variance. Lag=3 matches the
-    pymannkendall HR implementation and keeps both the HR and C3 sums stable.
+    Eq. 18 (MKRD, Hamed-Rao on rank-detrended data):
+        n/n*_s = 1 + 2 * sum_{i=1}^{n-1} (n-i)(n-i-1)(n-i-2) rho_s(i) / (n(n-1)(n-2))
+      rho_s = lag-i autocorrelation of the ranks of the Sen-detrended series,
+      only lags with |rho_s(i)| > z_{0.975}/sqrt(n) (pymannkendall default, lag=None).
+    Eq. 21 (third-order cumulant, lags 1 and 2, standardized series):
+        Phi_3 = 1/(n-2) * sum_{k=1}^{n-2} x_k x_{k+1} x_{k+2}
+    Eq. 22-23:  n/n*' = n/n*_s + Phi_3 ;  Var'(S) = Var(S) * n/n*'
 
-    Falls back to var0 (IID) if the corrected variance is non-positive.
+    The paper says "the rank-detrended data are standardized" before Eq. 21
+    but also "detrended and standardized"; the ranks reading is used here.
+    `residuals` are the Sen-detrended values. Phi_3 is dimensionless, so the
+    result is unit invariant. Falls back to var0 (IID) if non-positive.
     """
-    eps = residuals - float(np.mean(residuals))
-    n = len(eps)
-    lag_max = min(3, n - 2)   # match hamed_rao_modification_test lag=3
-    # Var(S) is unitless but kappa3 carries data-units^3; standardize so the
-    # correction does not change with the units of the variable.
-    sd = float(np.std(eps, ddof=1))
-    if sd > 1e-12:
-        eps = eps / sd
-
-    rho = []
-    for k in range(1, lag_max + 1):
-        if n - k < 2:
-            rho.append(0.0)
-        else:
-            r = float(np.corrcoef(eps[:-k], eps[k:])[0, 1])
-            rho.append(0.0 if math.isnan(r) else r)
-
-    n_star_inv = 1.0
-    for k in range(1, lag_max + 1):
-        w = 1.0 - k / (n + 1)
-        n_star_inv += (2.0 / n) * (n - k) * w * rho[k - 1]
-
+    from scipy.stats import rankdata
+    x = np.asarray(residuals, dtype=float)
+    n = len(x)
     var0 = n * (n - 1) * (2 * n + 5) / 18.0
-    var_hr = max(var0, var0 * n_star_inv)   # floor at var0 (IID): HR never below IID
+    if n < 4:
+        return var0
 
-    C3 = 0.0
-    for k in range(1, lag_max + 1):
-        kappa3_k = float(np.mean(eps[:-k] ** 2 * eps[k:]))
-        w = 1.0 - k / (n + 1)
-        C3 += (n - k) * w * kappa3_k
+    r = rankdata(x)
+    rc = r - r.mean()
+    ss = float(rc @ rc)
+    if ss <= 1e-12:
+        return var0
+    interval = 1.959963984540054 / math.sqrt(n)
+    sni = 0.0
+    for i in range(1, n):
+        rho = float(rc[:-i] @ rc[i:]) / ss
+        if abs(rho) > interval:
+            sni += (n - i) * (n - i - 1) * (n - i - 2) * rho
+    n_ns = 1.0 + 2.0 * sni / (n * (n - 1) * (n - 2))
 
-    var_mkc3 = var_hr + 2.0 * C3
-    return var_mkc3 if var_mkc3 > var0 * 0.5 else var0
+    z = rc / float(np.std(rc, ddof=1))
+    phi3 = float(np.mean(z[:-2] * z[1:-1] * z[2:]))
+
+    var = var0 * (n_ns + phi3)
+    return var if var > 0 else var0
 
 
 def mk_z_mkc3(vals):
