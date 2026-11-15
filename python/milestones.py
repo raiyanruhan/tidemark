@@ -2,7 +2,9 @@
 milestones.py, project Sen's slope forward to real-world policy thresholds.
 
 Thresholds and sources:
-  Temperature:  Paris Agreement (2015), Art. 2: +1.5C and +2.0C above pre-industrial
+  Temperature:  local warming (+0.5/1.0/1.5/2.0C) relative to the mean of the first
+                30 years of the local record. NOT the Paris Agreement targets, which
+                refer to global mean temperature vs pre-industrial.
   Precipitation/Evaporation: standard drought classification (% of baseline)
   Humidity:     semi-arid (<40%) and arid (<30%) zone definitions (Kottek et al. 2006)
   VPD:          crop stress thresholds (Lefsrud et al. 2020, doi:10.1016/j.scitotenv...)
@@ -22,23 +24,30 @@ def _ceil_years(numerator, rate):
     return int(math.ceil(round(numerator / rate, 10)))
 
 
-def compute_milestones(vals, slope, last_year, param):
+def compute_milestones(vals, slope, intercept, last_year, param):
     """
     Years when variable crosses real-world thresholds at current Sen's slope rate.
     Returns list of {delta, unit, year, label}. Only meaningful for significant trends.
+
+    Every projection starts from the fitted trend-line value at the last year
+    (intercept + slope*(n-1), time indexed 0..n-1 as in stats.compute_residuals),
+    not from the single noisy last observation.
     """
     milestones = []
     n = len(vals)
+    trend_last = float(intercept) + float(slope) * (n - 1)
 
     if param in ("T2M", "T2M_MAX", "T2M_MIN") and slope > 1e-6:
         baseline_n      = min(30, n)
+        first_year      = last_year - n + 1
+        base_span       = f"{first_year}-{first_year + baseline_n - 1}"
         baseline        = float(np.mean(vals[:baseline_n]))
-        current_anomaly = float(vals[-1]) - baseline
+        current_anomaly = trend_last - baseline
         for delta, label in [
-            (0.5,  None),
-            (1.0,  None),
-            (1.5,  "Paris Agreement +1.5C threshold"),
-            (2.0,  "Paris Agreement +2.0C threshold"),
+            (0.5,  f"local warming vs {base_span} local mean"),
+            (1.0,  f"local warming vs {base_span} local mean"),
+            (1.5,  f"local warming vs {base_span} local mean"),
+            (2.0,  f"local warming vs {base_span} local mean"),
         ]:
             remaining = delta - current_anomaly
             if remaining <= 0:
@@ -51,7 +60,7 @@ def compute_milestones(vals, slope, last_year, param):
 
     elif param in ("PRECTOTCORR", "EVLAND") and slope < -1e-9:
         baseline = float(np.mean(vals))
-        last_val = float(vals[-1])
+        last_val = trend_last
         for pct, label in [
             (0.80, "80% of baseline mean"),
             (0.60, "moderate drought (60% of baseline)"),
@@ -67,7 +76,7 @@ def compute_milestones(vals, slope, last_year, param):
             })
 
     elif param == "RH2M" and slope < -1e-9:
-        last_val = float(vals[-1])
+        last_val = trend_last
         for target, label in [
             (40.0, "semi-arid threshold (RH < 40%)"),
             (30.0, "arid threshold (RH < 30%)"),
@@ -81,7 +90,7 @@ def compute_milestones(vals, slope, last_year, param):
             })
 
     elif param == "VPD" and slope > 1e-9:
-        last_val = float(vals[-1])
+        last_val = trend_last
         for target, label in [
             (1.5, "moderate crop stress (VPD > 1.5 kPa)"),
             (2.0, "high crop stress (VPD > 2.0 kPa)"),
@@ -96,7 +105,7 @@ def compute_milestones(vals, slope, last_year, param):
             })
 
     elif param in ("GWETROOT", "GWETTOP", "GWETPROF") and slope < -1e-9:
-        last_val = float(vals[-1])
+        last_val = trend_last
         for target, label in [
             (0.3, "crop water stress onset (FAO-56)"),
             (0.2, "severe stress, yield impact likely"),
@@ -110,7 +119,7 @@ def compute_milestones(vals, slope, last_year, param):
             })
 
     elif param == "FROST_DAYS" and slope < -1e-9:
-        last_val = float(vals[-1])
+        last_val = trend_last
         for target, label in [
             (1.0, "near frost-free conditions (< 1 day/month)"),
             (0.5, "frost-free year-round"),
@@ -124,7 +133,7 @@ def compute_milestones(vals, slope, last_year, param):
             })
 
     elif param == "FROST_DAYS" and slope > 1e-9:
-        last_val = float(vals[-1])
+        last_val = trend_last
         for target, label in [
             (1.0, "> 1 frost day/month"),
             (5.0, "significant frost risk"),
@@ -139,13 +148,15 @@ def compute_milestones(vals, slope, last_year, param):
 
     elif param in ("TSOIL1", "TS") and slope > 1e-6:
         baseline_n      = min(30, n)
+        first_year      = last_year - n + 1
+        base_span       = f"{first_year}-{first_year + baseline_n - 1}"
         baseline        = float(np.mean(vals[:baseline_n]))
-        current_anomaly = float(vals[-1]) - baseline
+        current_anomaly = trend_last - baseline
         for delta, label in [
-            (0.5, None),
-            (1.0, None),
-            (1.5, "Paris Agreement +1.5C threshold"),
-            (2.0, "Paris Agreement +2.0C threshold"),
+            (0.5, f"local warming vs {base_span} local mean"),
+            (1.0, f"local warming vs {base_span} local mean"),
+            (1.5, f"local warming vs {base_span} local mean"),
+            (2.0, f"local warming vs {base_span} local mean"),
         ]:
             remaining = delta - current_anomaly
             if remaining <= 0:
@@ -157,7 +168,7 @@ def compute_milestones(vals, slope, last_year, param):
             })
 
     elif param == "WS10M" and slope > 1e-9:
-        last_val = float(vals[-1])
+        last_val = trend_last
         for target, label in [
             (5.5, "Beaufort 4 (light wind)"),
             (8.0, "Beaufort 5, optimal wind energy threshold"),
@@ -171,7 +182,7 @@ def compute_milestones(vals, slope, last_year, param):
             })
 
     elif param == "WS10M" and slope < -1e-9:
-        last_val = float(vals[-1])
+        last_val = trend_last
         for target, label in [
             (3.0, "terrestrial stilling threshold (Roderick 2007)"),
             (2.0, "calm, reduced evapotranspiration"),
@@ -185,7 +196,7 @@ def compute_milestones(vals, slope, last_year, param):
             })
 
     elif param == "DTR" and slope > 1e-9:
-        last_val = float(vals[-1])
+        last_val = trend_last
         for target, label in [
             (12.0, "large diurnal swing, crop thermal stress"),
             (15.0, "extreme diurnal range"),
@@ -199,7 +210,7 @@ def compute_milestones(vals, slope, last_year, param):
             })
 
     elif param == "DTR" and slope < -1e-9:
-        last_val = float(vals[-1])
+        last_val = trend_last
         # compressed DTR = more cloud cover or humidity; below 8C is a documented signal
         for target, label in [
             (8.0, "compressed diurnal range, cloud/humidity increase signal"),
@@ -213,7 +224,7 @@ def compute_milestones(vals, slope, last_year, param):
             })
 
     elif param == "NDVI" and slope < -1e-6:
-        last_val = float(vals[-1])
+        last_val = trend_last
         # NDVI thresholds: Tucker (1979) vegetation classification
         for target, label in [
             (0.5, "moderate vegetation decline"),
@@ -229,7 +240,7 @@ def compute_milestones(vals, slope, last_year, param):
             })
 
     elif param == "NDVI" and slope > 1e-6:
-        last_val = float(vals[-1])
+        last_val = trend_last
         for target, label in [
             (0.5, "moderate vegetation health"),
             (0.6, "good vegetation cover"),

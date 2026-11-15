@@ -153,7 +153,7 @@ def analyse(vals, years, param, last_year, monthly_by_year=None, progress=None, 
     }
 
     if significant:
-        result["milestones"] = compute_milestones(vals, slope, last_year, param)
+        result["milestones"] = compute_milestones(vals, slope, intercept, last_year, param)
     else:
         emit("running Monte Carlo simulation (1000 paths)...")
         result["trajectory"] = compute_trajectory(
