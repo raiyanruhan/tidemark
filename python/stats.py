@@ -155,6 +155,11 @@ def mkc3_variance(residuals, n):
     eps = residuals - float(np.mean(residuals))
     n = len(eps)
     lag_max = min(3, n - 2)   # match hamed_rao_modification_test lag=3
+    # Var(S) is unitless but kappa3 carries data-units^3; standardize so the
+    # correction does not change with the units of the variable.
+    sd = float(np.std(eps, ddof=1))
+    if sd > 1e-12:
+        eps = eps / sd
 
     rho = []
     for k in range(1, lag_max + 1):
@@ -246,9 +251,13 @@ def partial_mk(x, q):
     h_x = -np.sum(np.sign(xd), axis=1).astype(float)
     h_q = -np.sum(np.sign(qd), axis=1).astype(float)
 
-    sigma_xx = float(np.dot(h_x, h_x)) / 3.0
-    sigma_qq = float(np.dot(h_q, h_q)) / 3.0
-    sigma_xq = float(np.dot(h_x, h_q)) / 3.0
+    # Cov(S_g, S_h) = (K_gh + sum_k h_k(g) h_k(h)) / 3, K_gh = sum_{i<j} sgn(dg)*sgn(dh).
+    # For g=h this reproduces n(n-1)(2n+5)/18 exactly (no ties).
+    sx = np.sign(np.triu(xd, k=1))
+    sq = np.sign(np.triu(qd, k=1))
+    sigma_xx = (float(np.sum(sx * sx)) + float(np.dot(h_x, h_x))) / 3.0
+    sigma_qq = (float(np.sum(sq * sq)) + float(np.dot(h_q, h_q))) / 3.0
+    sigma_xq = (float(np.sum(sx * sq)) + float(np.dot(h_x, h_q))) / 3.0
 
     if sigma_qq < 1e-10 or sigma_xx < 1e-10:
         return None
