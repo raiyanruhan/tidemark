@@ -111,8 +111,9 @@ def fetch_ndvi_monthly(lat, lon, start_year, end_year, progress=None):
     NDVI = raw_int * 0.0001; valid range -0.2 to 1.0.
     Composites are kept only when the pixel reliability band is 0 (good) or
     1 (marginal). Cloudy (3) and snow/ice (2) composites carry valid-range NDVI
-    and are excluded via that band, not via a fill value. Years with <6 valid
-    months are dropped downstream by monthly_to_annual_min.
+    and are excluded via that band, not via a fill value. Years with too few
+    valid months are dropped downstream (fetch.satellite_annual: 9, relaxed to
+    6 then 4 if fewer than 10 years qualify).
 
     First fetch for a (lat, lon, start, end) combination is cached to
     ~/.tidemark/cache/. All subsequent calls load from disk instantly.

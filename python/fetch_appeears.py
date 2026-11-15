@@ -270,6 +270,10 @@ def _cache_dir():
 
 def _cache_path(lat, lon, product, start_year, end_year):
     safe = product.replace(".", "_")
+    # MOD16A2 caches written before the composite-length fix hold values that
+    # were all divided by 8; a new name keeps them from being reused.
+    if product.startswith("MOD16A2"):
+        safe += "_v2"
     return os.path.join(
         _cache_dir(),
         f"appeears_{safe}_{lat:.4f}_{lon:.4f}_{start_year}_{end_year}.json",

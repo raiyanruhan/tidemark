@@ -231,7 +231,9 @@ def generate_summary(result, display, label, unit):
         milestones = result.get("milestones") or []
         if milestones:
             m    = milestones[0]
-            note = m.get("label") or f"a change of {m['delta']} {unit_prose}"
+            note = f"a change of {m['delta']} {unit_prose}"
+            if m.get("label"):
+                note = f"{m['delta']} {m.get('unit', '')}".strip() + f" ({m['label']})"
             sentences.append(f"At the current rate, {note} is projected around {m['year']}.")
     else:
         cp = result.get("changepoint") or {}
