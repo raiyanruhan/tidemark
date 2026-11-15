@@ -195,4 +195,4 @@ range is "2033–2036 depending on MERRA-2 calibration accuracy" is a material d
 - **Published:** not in any paper in this exact form (σ_total substitution is implicit in
   Leroy 2008 but never made explicit for NASA POWER variables)
 - **Python:** no package. The ~20-line function above is the full implementation.
-- **Tidemark:** not yet implemented.
+- **Tidemark:** implemented. `python/trajectory.py::uTDT_detection_year()` applies σ_total = √(σ_N² + σ_cal²) using the `INSTRUMENT_UNCERTAINTY` table keyed by NASA parameter code. Result returned as `utdt_year`, `utdt_sigma_total`, `utdt_sigma_cal` in the trajectory JSON. Rendered as "Weatherhead uTDT" row in `src/output.rs` and `python/templates/result.html`.

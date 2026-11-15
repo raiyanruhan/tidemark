@@ -430,7 +430,7 @@
   <div class="u-fixed-width">
     <div class="col-start-large-4 col-9 col-medium-5 col-start-medium-2">
       <p>
-        tidemark draws from four NASA data sources depending on the variable you
+        tidemark draws from five NASA data sources depending on the variable you
         select. All measurements are monthly averages or composites. No data is
         stored on our servers.
       </p>
@@ -481,6 +481,22 @@
       <hr class="p-rule--muted" />
       <div class="row p-section--shallow">
         <div class="col-3 col-medium-2">
+          <h3 class="p-heading--5">ORNL DAAC MODIS</h3>
+        </div>
+        <div class="col-6 col-medium-3">
+          <p>
+            Vegetation index (NDVI) comes from MODIS Terra MOD13Q1 V6 via the ORNL DAAC
+            (Oak Ridge National Laboratory Distributed Active Archive Center) MODIS
+            Global Subsets REST API. NDVI measures green vegetation density from
+            surface reflectance in red and near-infrared bands. Coverage from 2000.
+            No account required.
+          </p>
+        </div>
+      </div>
+
+      <hr class="p-rule--muted" />
+      <div class="row p-section--shallow">
+        <div class="col-3 col-medium-2">
           <h3 class="p-heading--5">NASA LAADS DAAC</h3>
         </div>
         <div class="col-6 col-medium-3">
@@ -502,21 +518,17 @@
         </div>
         <div class="col-6 col-medium-3">
           <ul class="p-list">
-            <li class="p-list__item">Temperature (average, maximum, minimum) &mdash; 1981+</li>
-            <li class="p-list__item">Precipitation &mdash; 2001+ (GPM IMERG)</li>
-            <li class="p-list__item">Relative humidity &mdash; 1981+</li>
-            <li class="p-list__item">Evaporation over land &mdash; 1981+</li>
-            <li class="p-list__item">Wind speed &mdash; 1981+</li>
-            <li class="p-list__item">Land surface temperature &mdash; 2001+ (MODIS)</li>
-            <li class="p-list__item">Evapotranspiration &mdash; 2001+ (MODIS)</li>
-            <li class="p-list__item">Vegetation index (NDVI) &mdash; 2000+ (MODIS)</li>
-            <li class="p-list__item">Aerosol Optical Depth (AOD) &mdash; 2002+ (MODIS MOD08_M3)</li>
+            <li class="p-list__item"><strong>NASA POWER (1981+):</strong> Temperature (mean, max, min), skin temperature, soil temperature, relative humidity, evaporation, wind speed, soil moisture (root zone, surface layer, full profile), frost days, vapour pressure deficit (VPD), diurnal temperature range (DTR)</li>
+            <li class="p-list__item"><strong>GPM IMERG (2001+):</strong> Precipitation</li>
+            <li class="p-list__item"><strong>AppEEARS MODIS (2001+):</strong> Land surface temperature (LST), evapotranspiration (ET)</li>
+            <li class="p-list__item"><strong>ORNL DAAC MODIS (2000+):</strong> Vegetation index (NDVI)</li>
+            <li class="p-list__item"><strong>LAADS DAAC MODIS (2002+):</strong> Aerosol Optical Depth (AOD, MOD08_M3)</li>
           </ul>
           <p>
-            Record length varies by variable. Temperature and humidity have up to
-            45 years (1981-2025). Precipitation, land surface temperature, and
-            evapotranspiration start from 2001, giving up to 25 years. AOD starts
-            from 2002, giving up to 23 years.
+            19 variables total. Record length varies: POWER variables cover 1981&ndash;present
+            (up to 45 years), MODIS and GPM variables cover 2000&ndash;2002 onward (23&ndash;25 years).
+            Shorter records reduce statistical power; the detection floor is printed unconditionally
+            to show whether a trend can be resolved at the current record length.
           </p>
         </div>
       </div>

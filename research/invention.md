@@ -154,6 +154,7 @@ significance trajectory:
   analytical MK     2060   (MK n^1.5 growth formula)
   Weatherhead 1998  2061   (OLS detection time, φ=0.04)
   Monte Carlo       2060   (n=1000, empirical bootstrap)
+  CRB lower bound   2057   (Fisher information floor, any test)
   methods agree → consistent estimate
   85% PI            2038-2079
   note   329/1000 simulations become significant within 60 years

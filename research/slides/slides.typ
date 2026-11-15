@@ -311,8 +311,8 @@
   The Bayesian scan shows why: two cancelling regimes.]
 ]
 
-// Slide 9: AOD — Dr. Acker callback
-== Dr. Acker's Variable, Live
+// Slide 9: AOD — Dr. Aker callback
+== Dr. Aker's Variable, Live
 
 #cols[
   #text(size: 0.88em, style: "italic")[

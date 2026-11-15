@@ -153,12 +153,13 @@
     novel contributions. The first is the *significance trajectory*: a probabilistic,
     multi-method estimate of when a climate trend will cross the p#h(0.05em)<#h(0.05em)0.05
     threshold, together with a predictive interval and projected variable state at that
-    crossing. The second is a three-method cross-validation framework combining the
+    crossing. The second is a four-method cross-validation framework combining the
     analytical Mann-Kendall $n^(3/2)$ Z-score growth formula (derived from first principles
     and not previously published in usable form), the Weatherhead et al. (1998) OLS
-    detection time formula with autocorrelation correction, and a Monte Carlo empirical
-    bootstrap over 1,000 runs. When methods diverge by more than five years, Tidemark
-    identifies the cause and directs the user to the Monte Carlo estimate. The third is
+    detection time formula with autocorrelation correction, a Monte Carlo empirical
+    bootstrap over 1,000 runs, and a Cramér-Rao lower bound from Fisher information theory
+    that sets the minimum years any test could ever require. When methods diverge by more
+    than five years, Tidemark identifies the cause and directs the user to the correct estimate. The third is
     the detection floor: the minimum slope Mann-Kendall can resolve at 80% power for the
     current record length, printed unconditionally to contextualize trend strength.
     A fourth contribution is the MKC3 variance correction (Then et al., 2025), applied
@@ -220,7 +221,7 @@
     #toc-entry("4.1", [Mann-Kendall and the Hamed-Rao Correction], "7", lnk: <s-mk>)
     #toc-entry("4.2", [Sen's Slope Estimator], "8", lnk: <s-sens>)
     #toc-entry("4.3", [The Detection Floor], "9", lnk: <s-floor>)
-    #toc-entry("4.4", [Three Independent Estimation Methods], "10", lnk: <s-three>)
+    #toc-entry("4.4", [Four Independent Estimation Methods], "10", lnk: <s-three>)
     #toc-entry("4.5", [Divergence Detection and Diagnosis], "12", lnk: <s-div>)
     #toc-entry("4.6", [MKC3 Third-Order Cumulant Variance Correction], "13", lnk: <s-mkc3>)
     #toc-entry("4.7", [Partial Mann-Kendall with ENSO Control], "14", lnk: <s-pmk>)
@@ -288,7 +289,7 @@ The binary outcome carries three pieces of information not shown:
 This paper introduces the *significance trajectory*: given a time series with a
 consistent direction and Sen's slope $hat(beta)$, the significance trajectory is the
 distribution over future years $Y^*$ at which the Mann-Kendall p-value will cross
-$alpha = 0.05$, estimated via three independent methods with divergence detection and
+$alpha = 0.05$, estimated via four independent methods with divergence detection and
 an 85% Monte Carlo predictive interval. The trajectory is computed forward from the
 empirical noise distribution, requiring no Gaussian assumption.
 
@@ -296,7 +297,7 @@ This paper makes six contributions to the Earth system trend analysis problem:
 
 + The *significance trajectory concept*: a probabilistic estimate of when
   p#h(0.05em)<#h(0.05em)0.05 will be reached, with 85% predictive interval from
-  Monte Carlo simulation and three-method cross-validation.
+  Monte Carlo simulation and four-method cross-validation.
 
 + The *analytical $n^(3/2)$ crossing formula*: derived from the mathematical structure
   of the Mann-Kendall test, computable in microseconds without simulation, and not
@@ -576,10 +577,10 @@ The second case, slope below the floor, is the most valuable output the tool pro
 It converts "not yet significant" from an ambiguous result into a precise statement:
 the signal is too weak for the current instrument (45 years of annual data).
 
-== Three Independent Estimation Methods <s-three>
+== Four Independent Estimation Methods <s-three>
 
-For series with $p > 0.05$, Tidemark computes three independent estimates of the year
-the p-value will cross 0.05. Running three independent methods serves as cross-validation:
+For series with $p > 0.05$, Tidemark computes four independent estimates of the year
+the p-value will cross 0.05. Running four independent methods serves as cross-validation:
 agreement between methods validates the estimate, while divergence reveals invalid
 distributional assumptions.
 
@@ -704,16 +705,39 @@ When more than 500 of the 1,000 simulations do not reach significance within the
 is uncertain. This case indicates a slope below the detection floor or noise distribution
 incompatible with significance on any reasonable horizon.
 
-The IID empirical bootstrap is appropriate for annual data across all seven POWER
+The IID empirical bootstrap is appropriate for annual data across POWER meteorological
 variables, where lag-1 autocorrelation is typically below 0.35 and the effect of
 residual temporal clustering on crossing-year estimates is a second-order effect
 (2 to 5 years, smaller than the 85% PI width).
 
+=== Cramér-Rao Lower Bound
+
+The Cramér-Rao bound (CRB) gives the theoretical minimum number of years any
+unbiased estimator could require to detect a trend of size $hat(beta)$ at significance
+level $alpha$. No statistical test, however powerful, can beat it.
+
+For a linear trend model $Y_t = omega dot.op t + epsilon_t$ with noise density
+$f(epsilon)$ having Fisher information $I(f) = integral [f'(x)]^2 / f(x) d x$:
+
+$ n^*_CRB = n^*_Weatherhead dot.op (I(f) dot.op sigma^2)^(-1/3) $ <eq:crb>
+
+For Gaussian noise, $I(f) = 1/sigma^2$ and the CRB equals the Weatherhead formula
+exactly. For skewed noise (precipitation, arid NDVI), Fisher information exceeds
+$1/sigma^2$, so the CRB is shorter than Weatherhead --- meaning the theoretical
+limit is earlier than the parametric formula suggests.
+
+Tidemark estimates $I(hat(f))$ from the residuals using a Gaussian KDE, then
+computes $n^*_CRB$ analytically. The estimate is printed alongside the other
+three methods in every trajectory table. When the CRB agrees with Monte Carlo but
+both are shorter than Weatherhead, the noise distribution is non-Gaussian in a way
+that actually helps detection (as often happens with bounded, leptokurtic soil
+moisture series).
+
 == Divergence Detection and Diagnosis <s-div>
 
-After computing all three estimates, Tidemark evaluates:
+After computing all four estimates, Tidemark evaluates:
 
-$ "divergence" = max("est"_1, "est"_2, "est"_3) - min("est"_1, "est"_2, "est"_3) $ <eq:divergence>
+$ "divergence" = max("est"_1, "est"_2, "est"_3, "est"_4) - min("est"_1, "est"_2, "est"_3, "est"_4) $ <eq:divergence>
 
 If divergence exceeds five years, the methods are flagged as diverging. Tidemark
 then diagnoses the cause by computing:
@@ -727,7 +751,7 @@ the residuals are non-Gaussian. Methods 1 and 2 (Gaussian assumption) are labele
 invalid for the current data. The Monte Carlo estimate is flagged as the trusted result.
 
 This divergence as a diagnostic signal is the key methodological contribution of the
-three-method framework. When methods agree, the user has two independent confirmations
+four-method framework. When methods agree, the user has three independent confirmations
 from different derivations. When they disagree, the user learns *why* the trend is
 hard to confirm: not just that it takes longer, but that the shape of the noise
 distribution is the culprit.
@@ -902,7 +926,7 @@ The relationship between p-value and record length under a consistent trend is
 well-understood theoretically, as expressed in the $n^(3/2)$ Z-score growth rate
 derived in Section 4.4. What is new is the application of this relationship forward
 in time as a forecasting tool, combined with the empirical bootstrap for real noise
-distributions, and the three-method cross-validation to expose when the parametric
+distributions, and the four-method cross-validation to expose when the parametric
 approximations break down.
 
 The concept has academic precedent in the ozone monitoring literature [4].
@@ -1114,7 +1138,7 @@ mm/day/year) with $p = 0.74$. The floor ratio of 0.25 indicates the trend is at
 one-quarter of the detection floor: the current 45-year record cannot resolve this
 signal even if the underlying trend is real.
 
-Three-method cross-validation for Cairo:
+Four-method cross-validation for Cairo:
 
 #figure(
   block(
@@ -1137,7 +1161,7 @@ Three-method cross-validation for Cairo:
       [Monte Carlo (n = 1,000)], [2051], [Empirical bootstrap], [Valid],
     )
   ],
-  caption: [Three-method comparison for Cairo precipitation. Divergence = 77 years.],
+  caption: [Four-method comparison for Cairo precipitation. Divergence = 77 years.],
 )
 
 Divergence is 77 years, well above the 5-year threshold. Diagnosis: residual skewness = 1.95, Shapiro-Wilk normality $p < 0.001$. The residuals are strongly non-Gaussian,
@@ -1149,7 +1173,7 @@ All 1,000 Monte Carlo simulations reached significance within the 60-year projec
 window. The 85% PI spans 32 years, reflecting genuine uncertainty about the future
 noise realizations rather than any weakness in the method.
 
-This Cairo result illustrates the key practical finding of the three-method framework:
+This Cairo result illustrates the key practical finding of the four-method framework:
 the methods do not agree because the noise distribution is not Gaussian. The divergence
 is not an error. It is a diagnostic. It tells the user that the standard parametric
 formulas are inapplicable here, and that precipitation in Cairo is harder to track
@@ -1285,7 +1309,7 @@ is precisely the ambiguity that the significance trajectory quantifies.
 )
 
 Tidemark is the only tool in this comparison that answers the detection-time question
-and provides a significance trajectory with a predictive interval. The three-method
+and provides a significance trajectory with a predictive interval. The four-method
 cross-validation and divergence detection are not present in any existing tool.
 
 == Known Limitations
@@ -1334,9 +1358,14 @@ The principal technical contributions are:
   Mann-Kendall test, computable in microseconds, and not previously published in usable
   form.
 
-+ The *three-method cross-validation framework*, combining the analytical formula,
-  Weatherhead (1998), and Monte Carlo empirical bootstrap, with divergence detection
-  that identifies non-Gaussian noise and routes the user to the correct estimate.
++ The *Cramér-Rao lower bound for trend detection time*, computed from residual Fisher
+  information, that sets the theoretical minimum years any test could require and
+  exposes when parametric formulas are pessimistic for non-Gaussian noise.
+
++ The *four-method cross-validation framework*, combining the analytical formula,
+  Weatherhead (1998), Monte Carlo empirical bootstrap, and Cramér-Rao lower bound,
+  with divergence detection that identifies non-Gaussian noise and routes the user
+  to the correct estimate.
 
 + The *detection floor*, derived from the analytical formula, printed unconditionally
   to contextualize every result and distinguish "not significant" from "below the

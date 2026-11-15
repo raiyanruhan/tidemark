@@ -13,7 +13,7 @@
     <div class="col-start-large-4 col-9">
       <h1>{{ display }}</h1>
       <p class="u-text--muted u-no-margin--bottom">{{ label }} / {{ r.start_year }}-{{ r.end_year }} / {{ r.n_years }} years</p>
-      <p class="u-text--muted">{{ code }} / {{ ud_unit }} / Modified Mann-Kendall (Hamed-Rao, lag=3)</p>
+      <p class="u-text--muted">{{ code }} / {{ ud_unit }} / {{ r.method }}</p>
       <hr class="p-rule" />
       <div class="{% if sig %}p-notification--positive{% else %}p-notification--caution{% endif %}">
         <div class="p-notification__content">
@@ -180,7 +180,7 @@
           <div class="p-card__content">
             <table>
               <tr>
-                <td><span class="tip" data-tip="The smallest real trend this test can distinguish from noise with the current record length. A trend below this floor cannot be confirmed yet, even if it exists.">Detection floor</span></td>
+                <td><span class="tip" data-tip="The smallest real trend this test can distinguish from noise at 80% power (β_min = 9.93·σ/n^1.5). A trend below this floor cannot be confirmed yet, even if it exists. The Weatherhead formula above uses 90% power, so it gives a later crossing year.">Detection floor</span></td>
                 <td class="num">+/- {{ '%.5f' | format(r.detection_floor) }} {{ ud_unit }} / yr</td>
               </tr>
               <tr>
@@ -244,7 +244,7 @@
       {% set t = r.trajectory %}
       <div class="p-section" id="trajectory">
         <h2>Significance trajectory</h2>
-        <p class="u-text--muted section-sub">When will the evidence become conclusive? Five independent methods give estimates, each making different assumptions about the noise distribution.</p>
+        <p class="u-text--muted section-sub">When will the evidence become conclusive? Four independent estimates each make different assumptions about the noise distribution; together they cross-validate the result.</p>
         <table>
           <thead>
             <tr>
@@ -260,7 +260,7 @@
               <td>n^(3/2) Z-score growth formula{% if not t.methods_agree %}, assumes Gaussian IID, invalid here{% endif %}</td>
             </tr>
             <tr>
-              <td><span class="tip" data-tip="A formula from Weatherhead et al. (1998), a classic climate detection paper. Accounts for year-to-year autocorrelation. Also assumes normally distributed noise.">Weatherhead (1998)</span></td>
+              <td><span class="tip" data-tip="A formula from Weatherhead et al. (1998), a classic climate detection paper. Accounts for year-to-year autocorrelation. Also assumes normally distributed noise. Uses 90% power (z_β=1.28), slightly more conservative than the detection floor below (80% power).">Weatherhead (1998)</span></td>
               <td class="num">{{ t.weatherhead_year or 'N/A' }}</td>
               <td>OLS detection time, phi = {{ '%.2f' | format(t.weatherhead_phi) }}{% if not t.methods_agree %}, assumes Gaussian{% endif %}</td>
             </tr>
