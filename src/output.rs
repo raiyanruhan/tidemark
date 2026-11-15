@@ -25,6 +25,7 @@ pub fn print_result(config: &Config, json: &serde_json::Value) {
     println!("{:<12}{:.2}", "tau", tau);
     println!("{:<12}{:.2}", "z-score", z_score);
     print_pvalue_line(p_value, significant);
+    print_eprocess_line(&json["e_process"]);
     print_floor_line(floor, floor_ratio, &config.unit);
     print_efficiency_line(&json["efficiency"]);
     print_changepoint_line(&json["changepoint"]);
@@ -201,6 +202,34 @@ fn print_records_line(rec: &serde_json::Value) {
     };
     println!("{:<12}{} observed  {:.1} expected  {:.2}x{}",
         "records", observed, expected, ratio, note);
+}
+
+fn print_eprocess_line(ep: &serde_json::Value) {
+    let log_e = match ep["log_E"].as_f64() {
+        Some(v) => v,
+        None    => return,
+    };
+    let significant = ep["significant"].as_bool().unwrap_or(false);
+    let phi_note    = ep["phi_note"].as_bool().unwrap_or(false);
+
+    // compress large E_n to log form; small values show E_n = X.X
+    let e_n_str = match ep["E_n"].as_f64() {
+        Some(v) if v > 1000.0 => format!("E_n >> 20 (log E = {:.1})", log_e),
+        Some(v)               => format!("E_n = {:.1}", v),
+        None                  => return,
+    };
+
+    if significant {
+        println!("{:<12}{}   \u{2713} anytime-valid   (\u{03b1}=0.05)",
+            "e-process", e_n_str);
+    } else {
+        println!("{:<12}{}   threshold: 20   (\u{03b1}=0.05)",
+            "e-process", e_n_str);
+    }
+    if phi_note {
+        println!("{:<12}note: autocorrelation phi>0.4, e-process is approximate, interpret with p-value",
+            "");
+    }
 }
 
 fn print_floor_line(floor: f64, ratio: f64, unit: &str) {

@@ -130,6 +130,12 @@
                 <td><span class="tip" data-tip="The probability that this pattern could appear by chance in data with no real trend. Below 0.05 is the standard threshold for calling a trend statistically significant.">p-value</span></td>
                 <td class="num">{{ '%.6f' | format(r.p_value) }}</td>
               </tr>
+              {% if r.e_process %}
+              <tr>
+                <td><span class="tip" data-tip="An anytime-valid alternative to the p-value. E_n >= 20 means significant at α=0.05, and stays valid even if you check every year — no Bonferroni correction needed. Unlike p-values, you can peek at this number at any time without inflating the false positive rate.">E-process (AREP)</span></td>
+                <td class="num">E_n = {{ '%.1f'|format(r.e_process.E_n) }}{% if r.e_process.significant %} ✓{% endif %} &nbsp;/ {{ r.e_process.threshold }}</td>
+              </tr>
+              {% endif %}
             </table>
           </div>
         </div>

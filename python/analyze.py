@@ -48,7 +48,7 @@ from fetch       import (APPEEARS_PARAMS, COMPOUND_PARAMS, MODIS_PARAMS,
 from milestones  import compute_milestones
 from records     import record_rate
 from seasonal    import run_seasonal_mk
-from stats       import (compute_efficiency_metrics, compute_residuals,
+from stats       import (compute_arep, compute_efficiency_metrics, compute_residuals,
                          detection_floor, lag1_acf, run_mannkendall)
 from trajectory  import compute_pvalue_series, compute_trajectory
 
@@ -95,6 +95,7 @@ def analyse(vals, years, param, last_year, monthly_by_year=None, progress=None, 
     floor_ratio = abs(slope) / floor if floor > 1e-12 else 0.0
     eff         = compute_efficiency_metrics(residuals)
 
+    arep        = compute_arep(vals, residuals, slope, phi, eff)
     cp_detected, cp_idx, cp_p = pettitt_changepoint(vals)
     obs_r, exp_r, rec_ratio   = record_rate(vals, direction)
     seasonal                  = run_seasonal_mk(monthly_by_year) if monthly_by_year else {}
@@ -112,6 +113,7 @@ def analyse(vals, years, param, last_year, monthly_by_year=None, progress=None, 
         "detection_floor": floor,
         "floor_ratio":     round(floor_ratio, 2),
         "efficiency":      eff,
+        "e_process":       arep,
         "changepoint": {
             "detected": cp_detected,
             "year":     years[cp_idx] if cp_detected else None,
