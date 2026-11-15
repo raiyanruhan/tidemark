@@ -49,7 +49,7 @@
 
 Every existing climate trend tool reports the same thing: significant or not. That binary omits three things - how much more data is needed before a not-yet-significant trend becomes detectable, whether the current record is long enough to resolve the signal at all, and when a significant trend will cross real-world thresholds.
 
-Tidemark answers all three. It runs the Modified Mann-Kendall test with Hamed-Rao autocorrelation correction (or MKC3 for skewed series), computes the detection floor unconditionally, runs four independent crossing-year estimates with divergence detection, separates anthropogenic trend signal from ENSO variability using a rank-based partial Mann-Kendall test, and detects structural breaks in the time series using a Bayesian changepoint scan (NIG marginal likelihood, Chib 1998) that answers when the trend changed, not just whether it exists.
+Tidemark answers all three. It runs the Modified Mann-Kendall test with automatic method selection — block bootstrap (Önöz & Bayazit 2012) for high-autocorrelation series (|φ| > 0.3, e.g. soil moisture, NDVI), MKC3 third-order cumulant correction for skewed residuals (Then et al. 2025), and Hamed-Rao otherwise — computes the detection floor unconditionally, runs four independent crossing-year estimates with divergence detection, separates anthropogenic trend signal from ENSO variability using a rank-based partial Mann-Kendall test, and detects structural breaks in the time series using a Bayesian changepoint scan (NIG marginal likelihood, Chib 1998) that answers when the trend changed, not just whether it exists.
 
 ```
 $ tidemark analyze --location cairo --var rainfall
@@ -141,14 +141,17 @@ Tidemark applies the following statistical methods automatically:
 
 | Method | When applied | Reference |
 |---|---|---|
-| Modified Mann-Kendall (Hamed-Rao, lag=3) | Symmetric residuals (&#124;skewness&#124; ≤ 0.5) | Hamed & Rao 1998 |
-| MKC3 third-order cumulant correction | Skewed residuals (&#124;skewness&#124; > 0.5, n ≥ 20) | Then et al. 2025 |
+| Block Bootstrap MK (Politis-Romano block length) | High autocorrelation: &#124;φ&#124; > 0.3 (soil moisture, NDVI, ET) | Önöz & Bayazit 2012 |
+| Modified Mann-Kendall (Hamed-Rao, lag=3) | Low autocorrelation, symmetric residuals | Hamed & Rao 1998 |
+| MKC3 third-order cumulant correction | Low autocorrelation, skewed residuals (&#124;skewness&#124; > 0.5, n ≥ 20) | Then et al. 2025 |
 | Partial Mann-Kendall with ENSO control | When ENSO coverage ≥ 80% of period | Libiseller & Grimvall 2002 |
 | AREP e-process | Sequential evidence accumulation | Ramdas et al. 2023 |
 | Innovative Trend Analysis (ITA) | When extremes diverge (low and high tercile slopes have opposite signs) | Şen 2012 |
 | Bayesian changepoint detection (NIG marginal likelihood) | Always, when n ≥ 10 annual values | Chib 1998 |
 
-**MKC3** (Then, W., Hashim, R., and Alias, N.E., *Scientific Reports* 2025) corrects a systematic false-positive bias in Hamed-Rao for right-skewed series. For Cairo precipitation (skewness≈1.95), Hamed-Rao gives p≈0.03 (significant); MKC3 gives p>0.10 (not significant, correct). No Python package implements this; Tidemark is the first open implementation.
+**Block Bootstrap MK** (Önöz, B. and Bayazit, M., *Hydrological Processes* 2012) is selected automatically when |φ| > 0.3. Hamed-Rao assumes AR(1) dependence — a single lag-1 coefficient captures all autocorrelation. This fails for soil moisture (long memory, significant lags to 6–12 months), NDVI (lag-12 seasonality), and ET (inherits dependence from both temperature and precipitation). Block bootstrap resamples contiguous blocks of residuals, preserving the full within-block dependence structure without assuming any parametric form. Block length is selected automatically via the Politis-Romano bandwidth estimator. Only R's `modifiedmk::bbsmk` implements this; Tidemark is the first Python implementation.
+
+**MKC3** (Then, W., Hashim, R., and Alias, N.E., *Scientific Reports* 2025) corrects a systematic false-positive bias in Hamed-Rao for right-skewed series. Applied when |φ| ≤ 0.3 and |skewness| > 0.5. For Cairo precipitation (skewness≈1.95), Hamed-Rao gives p≈0.03 (significant); MKC3 gives p>0.10 (not significant, correct). No Python package implements this; Tidemark is the first open implementation.
 
 **Innovative Trend Analysis** (Şen, Z., *Journal of Hydrological Engineering* 2012) detects non-monotonic sub-population trends that Mann-Kendall cannot see. The series is split into two halves, each sorted in ascending order, and compared rank by rank. When the driest years are drying while the wettest years are intensifying, the net MK statistic is near zero (no trend) but ITA reveals the divergence. Output includes tercile slopes (low / mid / high value years) and a scatter plot showing both halves against the 1:1 diagonal. Shown only when low and high tercile slopes have opposite signs.
 

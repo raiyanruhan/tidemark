@@ -394,6 +394,60 @@ def bocpd_analysis(annual_values, years):
     return result
 
 
+def block_bootstrap_mk_pvalue(x, n_boot=2000, seed=42):
+    """
+    Block bootstrap p-value for Mann-Kendall trend test.
+    Önöz & Bayazit 2012, Hydrol. Process. 26(23):3552-3560.
+    More accurate than Hamed-Rao for ARMA/long-memory series (soil moisture, NDVI).
+    Returns (p_value, z_score, block_len).
+    """
+    rng = np.random.default_rng(seed)
+    n = len(x)
+
+    # Sen slope → residuals
+    i_idx, j_idx = np.triu_indices(n, k=1)
+    slopes = (x[j_idx] - x[i_idx]) / (j_idx - i_idx).astype(float)
+    beta = float(np.median(slopes))
+    residuals = x - beta * np.arange(n, dtype=float)
+
+    # Lag-1 ACF → Politis-Romano optimal block length
+    phi = float(np.corrcoef(residuals[:-1], residuals[1:])[0, 1])
+    phi = float(np.clip(phi, -0.99, 0.99))
+    if abs(phi) < 0.05:
+        block_len = 1
+    else:
+        c = 1.75 * abs(2.0 * phi / (1.0 - phi ** 2)) ** (2.0 / 3.0)
+        block_len = max(1, int(round(c * n ** (1.0 / 3.0))))
+    block_len = min(block_len, n // 4)
+
+    # Observed S statistic
+    S_obs = float(np.sum(np.sign(x[j_idx] - x[i_idx])))
+
+    # Block bootstrap null distribution
+    null_S = np.empty(n_boot)
+    n_blocks = int(math.ceil(n / block_len))
+    for b in range(n_boot):
+        starts = rng.integers(0, n - block_len + 1, size=n_blocks)
+        resampled = np.concatenate([residuals[s:s + block_len] for s in starts])[:n]
+        null_S[b] = float(np.sum(np.sign(resampled[j_idx] - resampled[i_idx])))
+
+    p = float(np.mean(np.abs(null_S) >= abs(S_obs)))
+    p = max(p, 1.0 / n_boot)
+
+    var_boot = float(np.var(null_S))
+    if var_boot > 0:
+        if S_obs > 0:
+            z = (S_obs - 1.0) / math.sqrt(var_boot)
+        elif S_obs < 0:
+            z = (S_obs + 1.0) / math.sqrt(var_boot)
+        else:
+            z = 0.0
+    else:
+        z = 0.0
+
+    return p, z, block_len
+
+
 def run_mannkendall(vals):
     """
     Hamed-Rao modified Mann-Kendall test (lag=3).

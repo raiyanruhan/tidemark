@@ -48,9 +48,9 @@ from fetch       import (APPEEARS_PARAMS, COMPOUND_PARAMS, LAADS_PARAMS,
 from milestones  import compute_milestones
 from records     import record_rate
 from seasonal    import run_seasonal_mk
-from stats       import (bocpd_analysis, compute_arep, compute_efficiency_metrics,
-                         compute_residuals, detection_floor, ita_analysis, lag1_acf,
-                         mk_z_mkc3, partial_mk, run_mannkendall)
+from stats       import (block_bootstrap_mk_pvalue, bocpd_analysis, compute_arep,
+                         compute_efficiency_metrics, compute_residuals, detection_floor,
+                         ita_analysis, lag1_acf, mk_z_mkc3, partial_mk, run_mannkendall)
 from trajectory  import compute_pvalue_series, compute_trajectory
 
 
@@ -95,7 +95,13 @@ def analyse(vals, years, param, last_year, monthly_by_year=None, progress=None, 
     phi         = lag1_acf(residuals)
 
     skewness = float(_skew(residuals))
-    if abs(skewness) > 0.5 and n >= 20:
+    if abs(phi) > 0.3:
+        bb_p, bb_z, bb_len = block_bootstrap_mk_pvalue(vals)
+        z_score     = round(bb_z, 4)
+        p_value     = bb_p
+        significant = bool(bb_p < 0.05)
+        method      = f"Block Bootstrap MK (Önöz & Bayazit 2012, block length={bb_len})"
+    elif abs(skewness) > 0.5 and n >= 20:
         mkc3_z, mkc3_p, _, mkc3_sig = mk_z_mkc3(vals)
         z_score     = round(mkc3_z, 4)
         p_value     = mkc3_p

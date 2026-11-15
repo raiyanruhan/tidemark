@@ -332,6 +332,63 @@
   </div>
 </section>
 
+<section class="p-section" id="autocorrelation">
+  <div class="u-fixed-width p-section--shallow">
+    <hr class="p-rule" />
+    <h2>High-autocorrelation variables</h2>
+  </div>
+  <div class="u-fixed-width">
+    <div class="col-start-large-4 col-9 col-medium-5 col-start-medium-2">
+      <p>
+        Some variables are strongly correlated from one year to the next. Soil moisture
+        carries memory from wet seasons across multiple years. NDVI vegetation indices
+        have a seasonal rhythm that introduces strong lag-12 autocorrelation. These
+        "long-memory" structures mean that consecutive data points are not independent,
+        which inflates the apparent certainty of the trend test.
+      </p>
+      <p>
+        The standard correction for autocorrelation, the Hamed-Rao method, works by
+        estimating a single lag-1 autocorrelation coefficient and adjusting the variance
+        of the test statistic accordingly. For temperature, that is accurate. For soil
+        moisture or NDVI, the autocorrelation extends across many lags and no single
+        coefficient captures it. Using Hamed-Rao for these variables still inflates the
+        Z-score and produces false positives.
+      </p>
+      <p>
+        tidemark detects high autocorrelation automatically. When the lag-1 autocorrelation
+        of the detrended residuals exceeds 0.3 in absolute value, it switches to a block
+        bootstrap test (Önöz &amp; Bayazit, 2012). Instead of assuming a parametric
+        dependence structure, block bootstrap resamples contiguous blocks of residuals,
+        preserving whatever within-block dependence structure the data actually has. The
+        block length is chosen automatically using the Politis-Romano bandwidth estimator,
+        and can range from 1 year (near-independent data) to around 10 years (strongly
+        correlated series with 45 years of record).
+      </p>
+
+      <hr class="p-rule--muted" />
+      <div class="row p-section--shallow">
+        <div class="col-3 col-medium-2">
+          <h3 class="p-heading--5">What this changes</h3>
+        </div>
+        <div class="col-6 col-medium-3">
+          <p>
+            For soil moisture with φ ≈ 0.5, the standard methods overstate confidence.
+            Block bootstrap correctly inflates the variance of the test statistic to
+            account for the full dependence structure, yielding a more conservative
+            p-value that is calibrated to the actual data. The result page always shows
+            which method was used and the block length selected, so the correction is
+            transparent and citable.
+          </p>
+          <p>
+            This is the same method used in R's <code>modifiedmk</code> package for
+            hydrology research. No Python implementation existed before Tidemark.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
 <section class="p-section" id="skewed-series">
   <div class="u-fixed-width p-section--shallow">
     <hr class="p-rule" />
@@ -348,18 +405,18 @@
         Z-score and producing false positives.
       </p>
       <p>
-        tidemark uses the MKC3 variance correction (Then et al., 2025) for precipitation,
-        NDVI, and other variables with skewed residuals. MKC3 adds a third-order cumulant
-        correction term that captures the skewness of lag products, which Hamed-Rao
-        misses. For symmetric series the two corrections are mathematically identical.
-        For Cairo precipitation (skewness &#8776; 1.95), the correction changes the
-        verdict from significant (Hamed-Rao, p &#8776; 0.03) to not significant
+        When autocorrelation is low (|φ| ≤ 0.3) but residual skewness is high, tidemark
+        uses the MKC3 variance correction (Then et al., 2025). MKC3 adds a third-order
+        cumulant correction term that captures the skewness of lag products, which
+        Hamed-Rao misses. For symmetric series the two corrections are mathematically
+        identical. For Cairo precipitation (skewness &#8776; 1.95), the correction changes
+        the verdict from significant (Hamed-Rao, p &#8776; 0.03) to not significant
         (MKC3, p &gt; 0.10).
       </p>
       <p>
-        The correction is applied automatically when residual skewness exceeds 0.5.
-        The test method is shown on every result so you always know which correction
-        was used.
+        The correction hierarchy is applied automatically: block bootstrap when |φ| > 0.3,
+        MKC3 when skewness exceeds 0.5, and Hamed-Rao otherwise. The test method is shown
+        on every result so you always know which correction was used.
       </p>
     </div>
   </div>

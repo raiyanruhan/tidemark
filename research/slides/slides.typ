@@ -132,7 +132,8 @@
 
   + Rust CLI resolves location → lat/lon
   + Python fetches from correct NASA API
-  + MKC3-corrected MK · Sen's slope · Pettitt changepoint
+  + *Auto-select MK test:* block bootstrap (|φ|>0.3) · MKC3 (skewed) · Hamed-Rao
+  + Sen's slope · Pettitt changepoint
   + ENSO separation (partial MK, rank-based)
   + ITA: sub-population slopes (extremes divergence)
   + *Bayesian changepoint scan (NIG marginal likelihood)*
@@ -168,7 +169,8 @@
   )
 
   #v(0.3em)
-  If methods diverge: prints why. Trusts Monte Carlo.
+  *p-value auto-selection:* block bootstrap (|φ|>0.3) · MKC3 (skewed) · Hamed-Rao \
+  If trajectory methods diverge: prints why. Trusts Monte Carlo.
 ][
   *Dhaka annual rainfall — not yet significant:*
 
@@ -333,7 +335,7 @@
   ```
 
   MODIS MOD08_M3 · 2002–2025 · 23 years \
-  MKC3 correction applied if skewed
+  Auto-select: block bootstrap / MKC3 / Hamed-Rao
 ][
   *Data: MODIS MOD08_M3 V6.1*
 

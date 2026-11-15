@@ -171,8 +171,11 @@ significance trajectory:
 
 4. The detection floor, derived from the analytical formula, is not in any existing MK tool.
 
-5. The combination of all four into a coherent CLI against live NASA data, in 48 hours, is the
-   hackathon submission.
+5. Block bootstrap MK — the correct p-value for soil moisture, NDVI, and other long-memory
+   series. R's `modifiedmk::bbsmk` exists. No Python implementation existed. Tidemark is first.
+
+6. The combination of all methods into a coherent CLI against live NASA data, with fully automatic
+   method selection, is the hackathon submission.
 
 ---
 
@@ -244,6 +247,35 @@ The analytical formula and Weatherhead are ~10 lines each in Python. The main wo
 
 ---
 
+### Block Bootstrap MK: nonparametric p-value for high-autocorrelation series (Önöz & Bayazit 2012)
+
+Hamed-Rao and MKC3 both assume AR(1) dependence structure. This fails for:
+- Soil moisture: long memory, significant lags to 6–12 months
+- NDVI: lag-12 seasonal periodicity
+- ET: inherits complex dependence from both temperature and precipitation
+
+For these series, Hamed-Rao underestimates Var(S) even after the correction, yielding
+inflated z-scores and false positives. Block bootstrap is model-free: it resamples
+contiguous blocks of residuals, preserving the within-block dependence structure
+without assuming any parametric form.
+
+Block length is selected automatically via the Politis-Romano bandwidth estimator:
+```
+c = 1.75 · |2φ / (1 − φ²)|^(2/3)
+l = round(c · n^(1/3)),  capped at n/4
+```
+For φ=0.5, n=45: l≈4. For φ=0.8, n=45: l≈8.
+
+Decision rule: |φ| > 0.3 → block bootstrap. Takes priority over MKC3.
+
+**R has `modifiedmk::bbsmk`. No Python package. Tidemark is first open Python implementation.**
+
+Implemented: `block_bootstrap_mk_pvalue()` in `python/stats.py`. Dispatch in
+`python/analyze.py` (checked before MKC3 path). Output: `json["method"]` =
+`"Block Bootstrap MK (Önöz & Bayazit 2012, block length=N)"`.
+
+---
+
 ### MKC3: third-order cumulant variance correction (Then 2025)
 
 Hamed-Rao uses only second-order statistics. For right-skewed series:
@@ -253,7 +285,7 @@ Cairo precipitation (skewness=1.95):
 - Hamed-Rao: p=0.03 → "significant"
 - MKC3: p>0.10 → "not significant" (correct)
 
-Decision rule: |skew| > 0.5 → MKC3; else Hamed-Rao. Fully automatic.
+Decision rule: |φ| ≤ 0.3 AND |skew| > 0.5 → MKC3; else Hamed-Rao. Fully automatic.
 
 **No existing Python package. Tidemark is first open implementation (Then et al. 2025).**
 
