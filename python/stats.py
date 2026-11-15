@@ -142,38 +142,44 @@ def compute_arep(vals, residuals, slope, phi, efficiency):
 def mkc3_variance(residuals, n):
     """
     MKC3 variance of Mann-Kendall S-statistic (Then et al., Sci. Rep. 2025).
-    Var_MKC3(S) = Var_HR(S) + 2 * sum_{k=1}^{n-1} (n-k) * w_k * kappa3_k
+    Var_MKC3(S) = Var_HR(S) + 2 * sum_{k=1}^{lag_max} (n-k) * w_k * kappa3_k
     where kappa3_k = mean(eps[:-k]^2 * eps[k:])  (third-order lag-k cumulant).
-    Returns var_hr as fallback if correction produces non-positive result.
+
+    Lag cutoff: same lag=3 convention as hamed_rao_modification_test.
+    Using all n-1 lags on short series (n~45) causes noisy high-lag autocorrelation
+    estimates to make n_star_inv negative → invalid variance. Lag=3 matches the
+    pymannkendall HR implementation and keeps both the HR and C3 sums stable.
+
+    Falls back to var0 (IID) if the corrected variance is non-positive.
     """
     eps = residuals - float(np.mean(residuals))
     n = len(eps)
+    lag_max = min(3, n - 2)   # match hamed_rao_modification_test lag=3
 
     rho = []
-    for k in range(1, n):
+    for k in range(1, lag_max + 1):
         if n - k < 2:
             rho.append(0.0)
         else:
             r = float(np.corrcoef(eps[:-k], eps[k:])[0, 1])
             rho.append(0.0 if math.isnan(r) else r)
-    rho = np.array(rho)
 
     n_star_inv = 1.0
-    for k in range(1, n):
+    for k in range(1, lag_max + 1):
         w = 1.0 - k / (n + 1)
         n_star_inv += (2.0 / n) * (n - k) * w * rho[k - 1]
 
     var0 = n * (n - 1) * (2 * n + 5) / 18.0
-    var_hr = var0 * n_star_inv
+    var_hr = max(var0, var0 * n_star_inv)   # floor at var0 (IID): HR never below IID
 
     C3 = 0.0
-    for k in range(1, n):
+    for k in range(1, lag_max + 1):
         kappa3_k = float(np.mean(eps[:-k] ** 2 * eps[k:]))
         w = 1.0 - k / (n + 1)
         C3 += (n - k) * w * kappa3_k
 
     var_mkc3 = var_hr + 2.0 * C3
-    return var_mkc3 if var_mkc3 > 0 else var_hr
+    return var_mkc3 if var_mkc3 > var0 * 0.5 else var0
 
 
 def mk_z_mkc3(vals):
@@ -356,8 +362,8 @@ def detect_changepoints(annual_values):
 
 def bocpd_analysis(annual_values, years):
     """
-    Full BOCPD analysis returning structured result for Tidemark output.
-    Returns None if series too short.
+    Bayesian changepoint analysis (NIG marginal likelihood, Chib 1998).
+    Returns structured result for Tidemark output, or None if series too short.
     """
     if len(annual_values) < 10:
         return None
