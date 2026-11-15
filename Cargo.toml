@@ -2,6 +2,18 @@
 name = "tidemark"
 version = "0.1.0"
 edition = "2021"
+description = "Earth system trend analysis CLI — Mann-Kendall, BOCPD, ENSO correction"
+license = "MIT"
+repository = "https://github.com/raiyanruhan/tidemark"
+homepage = "https://github.com/raiyanruhan/tidemark"
+readme = "README.md"
+
+[features]
+bundled = []
+
+[profile.dist]
+inherits = "release"
+lto = "thin"
 
 [dependencies]
 clap = { version = "4", features = ["derive"] }

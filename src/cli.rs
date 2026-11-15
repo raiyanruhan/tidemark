@@ -1,4 +1,5 @@
 use clap::{Parser, Subcommand};
+#[cfg(not(feature = "bundled"))]
 use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
@@ -79,10 +80,10 @@ fn run_analyze(args: AnalyzeArgs) -> Result<()> {
 
     let config = Config { lat, lon, location_display, param: param.to_string(), unit: unit.to_string(), var_label: var_label.to_string() };
 
-    let script = find_analyze_script()?;
-    let end    = current_year();
-    let start  = args.years.map(|y| end.saturating_sub(y)).unwrap_or(1981);
-    let json_str = spawn_python(&script, lat, lon, &config.param, start, end)?;
+    let analyzer = get_analyzer_path()?;
+    let end      = current_year();
+    let start    = args.years.map(|y| end.saturating_sub(y)).unwrap_or(1981);
+    let json_str = run_analyzer(&analyzer, lat, lon, &config.param, start, end)?;
 
     let json: serde_json::Value = serde_json::from_str(&json_str)
         .map_err(|e| format!("could not parse Python output: {e}\nOutput was: {json_str}"))?;
@@ -150,6 +151,7 @@ fn resolve_variable(input: &str) -> Result<(&'static str, &'static str, &'static
     }
 }
 
+#[cfg(not(feature = "bundled"))]
 fn find_analyze_script() -> Result<PathBuf> {
     // adjacent to binary (installed), then two levels up (cargo dev)
     if let Ok(exe) = std::env::current_exe() {
@@ -173,6 +175,7 @@ fn find_analyze_script() -> Result<PathBuf> {
     Err("cannot find python/analyze.py. run from the project root or place the script next to the binary.".to_string())
 }
 
+#[cfg(not(feature = "bundled"))]
 fn spawn_python(script: &Path, lat: f64, lon: f64, param: &str, start: u32, end: u32) -> Result<String> {
     let script_s = script.to_str().ok_or("non-UTF-8 script path")?;
     let args: Vec<String> = vec![
@@ -221,6 +224,94 @@ fn spawn_python(script: &Path, lat: f64, lon: f64, param: &str, start: u32, end:
     Err("Python not found. Install Python 3 and: pip install pymannkendall requests numpy scipy".to_string())
 }
 
+// --- bundle embedding (release builds only) -----------------------------------
+
+#[cfg(all(feature = "bundled", target_os = "windows"))]
+static ANALYZE_BUNDLE: &[u8] = include_bytes!("../dist/analyze.exe");
+#[cfg(all(feature = "bundled", not(target_os = "windows")))]
+static ANALYZE_BUNDLE: &[u8] = include_bytes!("../dist/analyze");
+
+#[cfg(feature = "bundled")]
+fn extract_bundle() -> Result<PathBuf> {
+    let home = std::env::var("HOME")
+        .or_else(|_| std::env::var("USERPROFILE"))
+        .unwrap_or_else(|_| ".".to_string());
+    let dir = PathBuf::from(&home).join(".tidemark");
+    std::fs::create_dir_all(&dir)
+        .map_err(|e| format!("cannot create ~/.tidemark: {e}"))?;
+
+    #[cfg(target_os = "windows")]
+    let path = dir.join("analyze.exe");
+    #[cfg(not(target_os = "windows"))]
+    let path = dir.join("analyze");
+
+    let needs_extract = path.metadata()
+        .map(|m| m.len() as usize != ANALYZE_BUNDLE.len())
+        .unwrap_or(true);
+
+    if needs_extract {
+        std::fs::write(&path, ANALYZE_BUNDLE)
+            .map_err(|e| format!("cannot extract analyzer to ~/.tidemark: {e}"))?;
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o755))
+                .map_err(|e| format!("cannot chmod analyzer: {e}"))?;
+        }
+    }
+    Ok(path)
+}
+
+#[cfg(feature = "bundled")]
+fn run_bundle(analyzer: &Path, lat: f64, lon: f64, param: &str, start: u32, end: u32) -> Result<String> {
+    let child = Command::new(analyzer)
+        .args([
+            "--lat",   &format!("{lat}"),
+            "--lon",   &format!("{lon}"),
+            "--var",   param,
+            "--start", &format!("{start}"),
+            "--end",   &format!("{end}"),
+        ])
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(|e| format!("failed to launch analyzer: {e}"))?;
+
+    let (tx, rx) = mpsc::channel();
+    std::thread::spawn(move || { tx.send(child.wait_with_output()).ok(); });
+
+    let out = match rx.recv_timeout(Duration::from_secs(600)) {
+        Ok(Ok(o))  => o,
+        Ok(Err(e)) => return Err(format!("failed to wait on analyzer: {e}")),
+        Err(_)     => return Err("timed out after 600s. First fetch for ndvi/lst/et is slow (AppEEARS async task); aod (MOD08_M3) first fetch ~2min; see ~/.tidemark/cache/. Other variables complete in <60s.".to_string()),
+    };
+
+    if !out.status.success() {
+        return Err(format!("analyzer error:\n{}", String::from_utf8_lossy(&out.stderr).trim()));
+    }
+    String::from_utf8(out.stdout)
+        .map_err(|e| format!("analyzer output not valid UTF-8: {e}"))
+}
+
+// --- dispatchers (always compiled) --------------------------------------------
+
+fn get_analyzer_path() -> Result<PathBuf> {
+    #[cfg(feature = "bundled")]
+    { return extract_bundle(); }
+    #[cfg(not(feature = "bundled"))]
+    { return find_analyze_script(); }
+}
+
+fn run_analyzer(path: &Path, lat: f64, lon: f64, param: &str, start: u32, end: u32) -> Result<String> {
+    #[cfg(feature = "bundled")]
+    { return run_bundle(path, lat, lon, param, start, end); }
+    #[cfg(not(feature = "bundled"))]
+    { return spawn_python(path, lat, lon, param, start, end); }
+}
+
+// ------------------------------------------------------------------------------
+
 fn run_compare(args: CompareArgs) -> Result<()> {
     if args.location.len() != 2 {
         return Err("compare requires exactly two --location arguments".to_string());
@@ -235,20 +326,20 @@ fn run_compare(args: CompareArgs) -> Result<()> {
     let config_b = Config { lat: lat_b, lon: lon_b, location_display: disp_b,
         param: param.to_string(), unit: unit.to_string(), var_label: var_label.to_string() };
 
-    let script  = find_analyze_script()?;
-    let end     = current_year();
+    let analyzer = get_analyzer_path()?;
+    let end      = current_year();
 
-    // Run both analyses in parallel, each spawns Python + waits; no shared state.
-    let script_a  = script.clone();
-    let script_b  = script;
-    let param_a   = param.to_string();
-    let param_b   = param.to_string();
+    // Run both analyses in parallel; no shared state.
+    let analyzer_a = analyzer.clone();
+    let analyzer_b = analyzer;
+    let param_a    = param.to_string();
+    let param_b    = param.to_string();
 
     let handle_a = std::thread::spawn(move || {
-        spawn_python(script_a.as_path(), lat_a, lon_a, &param_a, 1981, end)
+        run_analyzer(&analyzer_a, lat_a, lon_a, &param_a, 1981, end)
     });
     let handle_b = std::thread::spawn(move || {
-        spawn_python(script_b.as_path(), lat_b, lon_b, &param_b, 1981, end)
+        run_analyzer(&analyzer_b, lat_b, lon_b, &param_b, 1981, end)
     });
 
     let json_str_a = handle_a.join().map_err(|_| "analysis thread A panicked".to_string())??;
