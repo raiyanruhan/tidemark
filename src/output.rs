@@ -187,9 +187,9 @@ fn print_changepoint_line(cp: &serde_json::Value) {
     let p = cp["p"].as_f64().unwrap_or(1.0);
     if cp["detected"].as_bool().unwrap_or(false) {
         let year = cp["year"].as_i64().unwrap_or(0);
-        println!("{:<12}{}   (Pettitt p={:.3})", "changepoint", year, p);
+        println!("{:<12}{}   (sup-F break test p={:.3})", "changepoint", year, p);
     } else {
-        println!("{:<12}none   (Pettitt p={:.3})", "changepoint", p);
+        println!("{:<12}none   (sup-F break test p={:.3})", "changepoint", p);
     }
 }
 

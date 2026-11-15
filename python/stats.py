@@ -310,79 +310,139 @@ def ita_analysis(x):
     }
 
 
-def _nig_log_marginal(x, mu0=0.0, kappa0=1.0, alpha0=1.0, beta0=1.0):
-    """
-    Log marginal likelihood of x under Normal-Inverse-Gamma prior.
-    Closed-form: integrates out mean and variance analytically.
-    """
-    n = len(x)
-    if n == 0:
-        return 0.0
-    kappa_n = kappa0 + n
-    mu_n    = (kappa0 * mu0 + x.sum()) / kappa_n
-    alpha_n = alpha0 + n / 2.0
-    beta_n  = beta0 + 0.5 * ((x ** 2).sum() + kappa0 * mu0 ** 2 - kappa_n * mu_n ** 2)
-    if beta_n <= 0 or kappa_n <= 0:
-        return -math.inf
-    return (math.lgamma(alpha_n) - math.lgamma(alpha0)
-            + alpha0 * math.log(beta0) - alpha_n * math.log(beta_n)
-            + 0.5 * math.log(kappa0 / kappa_n)
-            - 0.5 * n * math.log(math.pi))
+CP_MIN_SEG       = 5
+CP_LOG_BF_THRESH = 3.5   # ~p96 of null max log BF for n = 30-60 (simulated, IID Gaussian noise)
+CP_N_BOOT        = 999
 
 
-def detect_changepoints(annual_values):
+def line_residuals(Y):
+    """OLS straight-line residuals for each row of Y (time = 0..n-1)."""
+    Y = np.atleast_2d(np.asarray(Y, dtype=float))
+    t = np.arange(Y.shape[1], dtype=float)
+    tc = t - t.mean()
+    slope = (Y @ tc) / float(tc @ tc)
+    return Y - Y.mean(axis=1, keepdims=True) - slope[:, None] * tc
+
+
+def ar1_null_series(resid, n_boot, rng):
     """
-    Bayesian changepoint detection via NIG marginal likelihood (Chib 1998).
-    For each candidate split t, log Bayes factor:
-      log BF(t) = log P(x[:t]) + log P(x[t:]) - log P(x)
-    BF > 3 (Jeffreys: moderate evidence) triggers detection.
-    Returns (log_bfs array, cp_idx) where cp_idx is None if max BF < 3.
+    Bootstrap series under "one straight line + AR(1) noise": estimate phi from
+    the line residuals, resample the innovations, rebuild the AR(1) process.
+    Keeps the autocorrelation and the innovation distribution (skew included),
+    both of which otherwise pass for structural breaks. phi gets the usual
+    small-sample bias correction for a fitted linear trend, (1 + 4*phi)/n.
+    """
+    r = np.asarray(resid, dtype=float)
+    n = len(r)
+    phi = lag1_acf(r)
+    phi = float(np.clip(phi + (1.0 + 4.0 * phi) / n, -0.95, 0.95))
+    innov = r[1:] - phi * r[:-1]
+    innov = innov - innov.mean()
+    burn = 20
+    e = rng.choice(innov, size=(n_boot, n + burn), replace=True)
+    out = np.empty_like(e)
+    out[:, 0] = e[:, 0]
+    for i in range(1, n + burn):
+        out[:, i] = phi * out[:, i - 1] + e[:, i]
+    return out[:, burn:]
+
+
+def _nig_line_log_marginal(m, su, suu, sy, suy, syy, a0=1.0, b0=1.0):
+    """
+    Log marginal likelihood of a straight-line model y = c0 + c1*u + e from the
+    sufficient statistics of m points. Conjugate Normal-Inverse-Gamma prior:
+    coefficients ~ N(0, sigma^2 I), sigma^2 ~ IG(a0, b0); coefficients and
+    variance integrated out in closed form (conjugate Bayesian regression).
+    """
+    from scipy.special import gammaln
+    det  = (m + 1.0) * (suu + 1.0) - su * su          # det(X^T X + I)
+    quad = ((suu + 1.0) * sy * sy - 2.0 * su * sy * suy + (m + 1.0) * suy * suy) / det
+    a_n  = a0 + m / 2.0
+    b_n  = np.maximum(b0 + 0.5 * (syy - quad), 1e-300)
+    return (gammaln(a_n) - gammaln(a0) + a0 * math.log(b0) - a_n * np.log(b_n)
+            - 0.5 * np.log(det) - 0.5 * m * math.log(2.0 * math.pi))
+
+
+def _two_line_log_bfs(Y):
+    """
+    log BF("two lines split at k" vs "one line") for each row of Y and every
+    k in [CP_MIN_SEG, n - CP_MIN_SEG]. Rows are reduced to standardized OLS
+    line residuals first, so the result ignores units and trend size.
+    Returns (ks, log_bf array of shape rows x len(ks)).
+    """
+    R = line_residuals(Y)
+    n = R.shape[1]
+    sd = np.sqrt((R * R).sum(axis=1, keepdims=True) / (n - 2))
+    Ys = R / np.maximum(sd, 1e-300)
+    t = np.arange(n, dtype=float)
+    u = (t - t.mean()) / t.std()
+    ks = np.arange(CP_MIN_SEG, n - CP_MIN_SEG + 1)
+    i = ks - 1
+
+    cu, cuu = np.cumsum(u), np.cumsum(u * u)
+    cy, cuy, cyy = np.cumsum(Ys, axis=1), np.cumsum(Ys * u, axis=1), np.cumsum(Ys * Ys, axis=1)
+    full  = _nig_line_log_marginal(float(n), cu[-1], cuu[-1], cy[:, -1], cuy[:, -1], cyy[:, -1])
+    left  = _nig_line_log_marginal(ks.astype(float), cu[i], cuu[i], cy[:, i], cuy[:, i], cyy[:, i])
+    right = _nig_line_log_marginal(
+        (n - ks).astype(float), cu[-1] - cu[i], cuu[-1] - cuu[i],
+        cy[:, -1:] - cy[:, i], cuy[:, -1:] - cuy[:, i], cyy[:, -1:] - cyy[:, i])
+    return ks, left + right - full[:, None]
+
+
+def detect_changepoints(annual_values, n_boot=CP_N_BOOT, seed=42):
+    """
+    Bayesian single-changepoint detection for a trending series.
+    For each candidate split k, log Bayes factor of "two lines" over "one line":
+      log BF(k) = log P(x[:k]) + log P(x[k:]) - log P(x)
+    with each P the closed-form NIG marginal likelihood of a straight-line model.
+    The baseline is one line, not a constant mean: a mean-shift model reads
+    every monotonic trend as a changepoint.
+
+    Detection needs max log BF above CP_LOG_BF_THRESH and above the 95th
+    percentile of the same maximum under a one-line + AR(1) bootstrap null
+    (ar1_null_series), since autocorrelated or skewed noise inflates the
+    Bayes factor of an IID Gaussian model.
+    Returns (log_bfs array, cp_idx); cp_idx is the first index of the new
+    regime, or None.
     """
     x = np.array(annual_values, dtype=float)
-    std = float(np.std(x, ddof=1))
-    if std < 1e-12:
-        return np.zeros(len(x)), None
-    x_std = (x - float(np.mean(x))) / std
+    n = len(x)
+    log_bfs = np.full(n, -math.inf)
+    if n < 2 * CP_MIN_SEG + 2:
+        return log_bfs, None
+    resid = line_residuals(x)[0]
+    if float(np.std(resid)) < 1e-12:
+        return np.zeros(n), None
 
-    n         = len(x_std)
-    log_p_all = _nig_log_marginal(x_std)
-    log_bfs   = np.full(n, -math.inf)
+    ks, lbf = _two_line_log_bfs(x)
+    log_bfs[ks] = lbf[0]
+    best     = int(ks[np.argmax(lbf[0])])
+    best_lbf = float(log_bfs[best])
+    if best_lbf <= CP_LOG_BF_THRESH:
+        return log_bfs, None
 
-    for t in range(3, n - 3):
-        log_bfs[t] = (_nig_log_marginal(x_std[:t])
-                      + _nig_log_marginal(x_std[t:])
-                      - log_p_all)
-
-    interior = log_bfs[3:-3]
-    best_i   = int(np.argmax(interior))
-    best_lbf = float(interior[best_i])
-
-    # Threshold calibrated at ~p97 of null max log_BF for n=44 (simulated).
-    # Scales naturally with series length via log(n): ~1.9 for n=44 raw, but
-    # multiple comparisons inflate null; fixed 3.0 gives ~2-3% FPR for 30-60yr series.
-    threshold = 3.0
-    if best_lbf > threshold:
-        cp_idx = best_i + 3
-    else:
-        cp_idx = None
-
-    return log_bfs, cp_idx
+    null = ar1_null_series(resid, n_boot, np.random.default_rng(seed))
+    null_max = _two_line_log_bfs(null)[1].max(axis=1)
+    if best_lbf <= float(np.percentile(null_max, 95)):
+        return log_bfs, None
+    return log_bfs, best
 
 
 def bocpd_analysis(annual_values, years):
     """
-    Bayesian changepoint analysis (NIG marginal likelihood, Chib 1998).
+    Bayesian changepoint analysis: one line vs two lines, conjugate NIG
+    marginal likelihoods (see detect_changepoints).
     Returns structured result for Tidemark output, or None if series too short.
     """
-    if len(annual_values) < 10:
+    if len(annual_values) < 2 * CP_MIN_SEG + 2:
         return None
 
     log_bfs, cp_idx = detect_changepoints(annual_values)
 
-    # Logistic confidence centered at threshold=3.0: 50% at detection edge,
-    # ~88% at lbf=5, ~99% at lbf=8, capped at 0.99 to avoid false certainty.
+    # Logistic confidence centered at the threshold: 50% at detection edge,
+    # capped at 0.99 to avoid false certainty.
     def _lbf_to_conf(lbf):
-        x = min(lbf - 3.0, 10.0)
+        x = min(lbf - CP_LOG_BF_THRESH, 10.0)
         return round(min(0.99, math.exp(x) / (1.0 + math.exp(x))), 3)
 
     result = {

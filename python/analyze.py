@@ -40,7 +40,7 @@ def _load_dotenv():
 
 _load_dotenv()
 
-from changepoint import pettitt_changepoint
+from changepoint import trend_break_test
 from decompose   import enso_correct, fetch_enso
 from fetch       import (APPEEARS_PARAMS, COMPOUND_PARAMS, LAADS_PARAMS,
                          MODIS_PARAMS, compute_compound_series, fetch_monthly,
@@ -132,7 +132,7 @@ def analyse(vals, years, param, last_year, monthly_by_year=None, progress=None, 
                 pmk["p_raw"]           = round(p_value, 6)
                 pmk["significant_raw"] = significant
 
-    cp_detected, cp_idx, cp_p = pettitt_changepoint(vals)
+    cp_detected, cp_idx, cp_p = trend_break_test(vals)
     bocpd_result              = bocpd_analysis(vals, years)
     obs_r, exp_r, rec_ratio   = record_rate(vals, direction)
     seasonal                  = run_seasonal_mk(monthly_by_year) if monthly_by_year else {}

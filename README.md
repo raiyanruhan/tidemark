@@ -49,7 +49,7 @@
 
 Every existing climate trend tool reports the same thing: significant or not. That binary omits three things - how much more data is needed before a not-yet-significant trend becomes detectable, whether the current record is long enough to resolve the signal at all, and when a significant trend will cross real-world thresholds.
 
-Tidemark answers all three. It runs the Modified Mann-Kendall test with automatic method selection — block bootstrap (Önöz & Bayazit 2012) for high-autocorrelation series (|φ| > 0.3, e.g. soil moisture, NDVI), MKC3 third-order cumulant correction for skewed residuals (Then et al. 2025), and Hamed-Rao otherwise — computes the detection floor unconditionally, runs four independent crossing-year estimates with divergence detection, separates anthropogenic trend signal from ENSO variability using a rank-based partial Mann-Kendall test, and detects structural breaks in the time series using a Bayesian changepoint scan (NIG marginal likelihood, Chib 1998) that answers when the trend changed, not just whether it exists.
+Tidemark answers all three. It runs the Modified Mann-Kendall test with automatic method selection — block bootstrap (Önöz & Bayazit 2012) for high-autocorrelation series (|φ| > 0.3, e.g. soil moisture, NDVI), MKC3 third-order cumulant correction for skewed residuals (Then et al. 2025), and Hamed-Rao otherwise — computes the detection floor unconditionally, runs four independent crossing-year estimates with divergence detection, separates anthropogenic trend signal from ENSO variability using a rank-based partial Mann-Kendall test, and detects structural breaks in the time series using a Bayesian changepoint scan (one trend line vs two, conjugate NIG marginal likelihoods) that answers when the trend changed, not just whether it exists.
 
 ```
 $ tidemark analyze --location cairo --var rainfall
@@ -131,7 +131,7 @@ Tidemark applies the following statistical methods automatically:
 | Partial Mann-Kendall with ENSO control | When ENSO coverage ≥ 80% of period | Libiseller & Grimvall 2002 |
 | AREP e-process | Sequential evidence accumulation | Ramdas et al. 2023 |
 | Innovative Trend Analysis (ITA) | When extremes diverge (low and high tercile slopes have opposite signs) | Şen 2012 |
-| Bayesian changepoint detection (NIG marginal likelihood) | Always, when n ≥ 10 annual values | Chib 1998 |
+| Bayesian changepoint detection (one line vs two, NIG marginal likelihood) | Always, when n ≥ 12 annual values | conjugate Bayesian regression |
 
 **Block Bootstrap MK** (Önöz, B. and Bayazit, M., *Hydrological Processes* 2012) is selected automatically when |φ| > 0.3. Hamed-Rao assumes AR(1) dependence — a single lag-1 coefficient captures all autocorrelation. This fails for soil moisture (long memory, significant lags to 6–12 months), NDVI (lag-12 seasonality), and ET (inherits dependence from both temperature and precipitation). Block bootstrap resamples contiguous blocks of residuals, preserving the full within-block dependence structure without assuming any parametric form. Block length is selected automatically via the Politis-Romano bandwidth estimator. Only R's `modifiedmk::bbsmk` implements this; Tidemark is the first Python implementation.
 

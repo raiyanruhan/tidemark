@@ -237,7 +237,7 @@ def generate_summary(result, display, label, unit):
         cp = result.get("changepoint") or {}
         if cp.get("detected") and cp.get("year"):
             sentences.append(
-                f"There is evidence of a step change around {cp['year']}, "
+                f"There is evidence of a break in the trend line around {cp['year']}, "
                 f"suggesting the rate may have shifted at that point."
             )
 
