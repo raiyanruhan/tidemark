@@ -265,6 +265,36 @@ def partial_mk(x, q):
     }
 
 
+def ita_analysis(x):
+    """
+    Innovative Trend Analysis (Şen 2012).
+    Split series into two halves, sort each, compare sorted pairs by tercile.
+    Returns tercile slopes and raw sorted arrays for the scatter plot.
+    """
+    n = len(x)
+    half = n // 2
+    x1 = np.sort(x[:half])
+    x2 = np.sort(x[half:half * 2])
+
+    ita_slope = (np.mean(x2) - np.mean(x1)) / half
+
+    t1 = half // 3
+    t2 = 2 * t1
+
+    low_slope  = (np.mean(x2[:t1])   - np.mean(x1[:t1]))   / half
+    mid_slope  = (np.mean(x2[t1:t2]) - np.mean(x1[t1:t2])) / half
+    high_slope = (np.mean(x2[t2:])   - np.mean(x1[t2:]))   / half
+
+    return {
+        "ita_slope":  round(float(ita_slope),  6),
+        "low_slope":  round(float(low_slope),  6),
+        "mid_slope":  round(float(mid_slope),  6),
+        "high_slope": round(float(high_slope), 6),
+        "x1_sorted":  x1.tolist(),
+        "x2_sorted":  x2.tolist(),
+    }
+
+
 def run_mannkendall(vals):
     """
     Hamed-Rao modified Mann-Kendall test (lag=3).

@@ -159,4 +159,19 @@ This extends the significance trajectory concept to sub-population trends — an
 - **Published:** 2012. Applied in 50+ regional papers 2020–2025.
 - **Python:** no package. The ~20-line implementation above is the full core.
 - **R:** no dedicated package (manual implementations in papers).
-- **Tidemark:** not yet implemented.
+- **Tidemark:** ✓ implemented.
+
+`python/stats.py` — `ita_analysis(x)`: splits series into two halves, sorts each, returns
+`{ita_slope, low_slope, mid_slope, high_slope, x1_sorted, x2_sorted}`.
+
+`python/analyze.py` — calls `ita_analysis(vals)` after MK. Adds `result["ita"]` only when
+`low_slope * high_slope < 0` (extremes diverging in opposite directions). Otherwise `None` —
+section is hidden.
+
+`python/templates/result.html` — "Extreme trend structure" section: sub-population slope table
+(low/mid/high with color dots + interpretation labels) + Chart.js scatter plot showing
+x1_sorted vs x2_sorted with 1:1 diagonal, three tercile clusters colored blue/grey/orange,
+and dashed slope lines per tercile. Only rendered when `r.ita` is set.
+
+`python/app.py` — `generate_summary()` appends a sentence when ITA is present, naming
+the diverging slopes and noting MK misses the fork.

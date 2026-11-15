@@ -82,6 +82,11 @@
               <a class="p-side-navigation__link" href="#seasonal">Seasonal breakdown</a>
             </li>
             {% endif %}
+            {% if r.ita %}
+            <li class="p-side-navigation__item">
+              <a class="p-side-navigation__link" href="#ita">Extreme trend structure</a>
+            </li>
+            {% endif %}
           </ul>
           <hr class="p-rule--muted" />
           <a href="/" class="p-button--base has-icon u-no-margin--bottom">
@@ -394,6 +399,70 @@
             {% endfor %}
           </tbody>
         </table>
+      </div>
+      {% endif %}
+
+      {# ITA — Innovative Trend Analysis #}
+      {% if r.ita %}
+      {% set ita = r.ita %}
+      <div class="p-section" id="ita">
+        <h2>Extreme trend structure</h2>
+        <p class="u-text--muted section-sub">
+          Innovative Trend Analysis (Şen 2012) splits the record into two halves,
+          sorts each, and compares them rank by rank.
+          Points above the 1:1 diagonal mean the later period is higher than the earlier.
+          The three clusters show low-, mid-, and high-value years separately —
+          revealing divergence that Mann-Kendall's single tau statistic cannot detect.
+        </p>
+
+        <div class="p-card" style="margin-bottom:1.5rem">
+          <h3 class="p-card__title">Sub-population slopes</h3>
+          <div class="p-card__content">
+            <table>
+              <thead>
+                <tr>
+                  <th>Sub-population</th>
+                  <th>ITA slope ({{ ud_unit }}/yr)</th>
+                  <th>Interpretation</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#3b82f6;margin-right:6px"></span>Low-value years</td>
+                  <td class="num">{{ '%+.4f' | format(ita.low_slope) }}</td>
+                  <td>{% if ita.low_slope < 0 %}driest years getting drier{% else %}driest years rising{% endif %}</td>
+                </tr>
+                <tr>
+                  <td><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#9ca3af;margin-right:6px"></span>Mid-value years</td>
+                  <td class="num">{{ '%+.4f' | format(ita.mid_slope) }}</td>
+                  <td>{% if ita.mid_slope | abs < 0.0005 %}average years stable{% elif ita.mid_slope > 0 %}average years rising{% else %}average years falling{% endif %}</td>
+                </tr>
+                <tr>
+                  <td><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#f97316;margin-right:6px"></span>High-value years</td>
+                  <td class="num">{{ '%+.4f' | format(ita.high_slope) }}</td>
+                  <td>{% if ita.high_slope > 0 %}wettest years getting wetter{% else %}wettest years declining{% endif %}</td>
+                </tr>
+                <tr>
+                  <td><strong>Overall ITA slope</strong></td>
+                  <td class="num"><strong>{{ '%+.4f' | format(ita.ita_slope) }}</strong></td>
+                  <td>net; compare with Sen's slope above</td>
+                </tr>
+              </tbody>
+            </table>
+            <p style="margin-top:0.75rem;font-size:0.875rem;color:#666">
+              <strong>Intensification of extremes</strong> — Mann-Kendall tau tests only the net monotonic signal.
+              ITA detects this sub-population divergence.
+            </p>
+          </div>
+        </div>
+
+        <div style="position:relative; height:380px">
+          <canvas id="ita-chart"></canvas>
+        </div>
+        <p style="font-size:0.8rem;color:#888;text-align:center;margin-top:0.5rem">
+          Earlier half (sorted) vs Later half (sorted). Points above the diagonal = later period higher.
+          Blue = driest tercile, grey = middle, orange = wettest.
+        </p>
       </div>
       {% endif %}
 
@@ -762,6 +831,141 @@ new Chart(document.getElementById('ts-chart'), {
         y: { min: 0, max: 1.0, ticks: { color: '#666' }, grid: { color: '#e5e5e5' }, title: { display: true, text: 'p-value', color: '#666' } },
       },
     },
+  });
+})();
+</script>
+{% endif %}
+
+{% if r.ita %}
+<script>
+(function () {
+  var x1 = {{ r.ita.x1_sorted | tojson }};
+  var x2 = {{ r.ita.x2_sorted | tojson }};
+  if (!x1 || !x1.length) return;
+
+  var n    = x1.length;
+  var t1   = Math.floor(n / 3);
+  var t2   = 2 * t1;
+
+  var COLORS = { low: '#3b82f6', mid: '#9ca3af', high: '#f97316' };
+
+  function makePoints(start, end) {
+    var pts = [];
+    for (var i = start; i < end; i++) pts.push({ x: x1[i], y: x2[i] });
+    return pts;
+  }
+
+  /* 1:1 diagonal */
+  var allVals  = x1.concat(x2);
+  var vMin     = Math.min.apply(null, allVals);
+  var vMax     = Math.max.apply(null, allVals);
+  var pad      = (vMax - vMin) * 0.05;
+  var diagMin  = vMin - pad;
+  var diagMax  = vMax + pad;
+
+  /* ITA slope lines per tercile (y = x + offset where offset = mean(x2) - mean(x1)) */
+  function mean(arr, s, e) {
+    var sum = 0;
+    for (var i = s; i < e; i++) sum += arr[i];
+    return sum / (e - s);
+  }
+  function slopeLine(start, end, color) {
+    var dx = mean(x1, start, end);
+    var dy = mean(x2, start, end);
+    var offset = dy - dx;
+    return {
+      type: 'line',
+      label: null,
+      data: [{ x: diagMin, y: diagMin + offset }, { x: diagMax, y: diagMax + offset }],
+      borderColor: color,
+      backgroundColor: 'transparent',
+      borderWidth: 1.2,
+      borderDash: [4, 3],
+      pointRadius: 0,
+      showLine: true,
+    };
+  }
+
+  new Chart(document.getElementById('ita-chart'), {
+    type: 'scatter',
+    data: {
+      datasets: [
+        {
+          label: 'Driest years (low tercile)',
+          data: makePoints(0, t1),
+          backgroundColor: COLORS.low,
+          borderColor: COLORS.low,
+          pointRadius: 5,
+          pointHoverRadius: 7,
+        },
+        {
+          label: 'Mid-range years',
+          data: makePoints(t1, t2),
+          backgroundColor: COLORS.mid,
+          borderColor: COLORS.mid,
+          pointRadius: 5,
+          pointHoverRadius: 7,
+        },
+        {
+          label: 'Wettest years (high tercile)',
+          data: makePoints(t2, n),
+          backgroundColor: COLORS.high,
+          borderColor: COLORS.high,
+          pointRadius: 5,
+          pointHoverRadius: 7,
+        },
+        /* 1:1 diagonal */
+        {
+          label: '1:1 (no change)',
+          type: 'line',
+          data: [{ x: diagMin, y: diagMin }, { x: diagMax, y: diagMax }],
+          borderColor: 'rgba(0,0,0,0.25)',
+          backgroundColor: 'transparent',
+          borderWidth: 1.5,
+          borderDash: [6, 4],
+          pointRadius: 0,
+          showLine: true,
+        },
+        slopeLine(0,  t1, COLORS.low),
+        slopeLine(t1, t2, COLORS.mid),
+        slopeLine(t2, n,  COLORS.high),
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          labels: {
+            color: CH_TEXT,
+            font: { family: CH_MONO },
+            filter: function(item) { return item.datasetIndex < 4; }
+          }
+        },
+        tooltip: {
+          callbacks: {
+            label: function(ctx) {
+              if (ctx.datasetIndex >= 4) return null;
+              return ' earlier: ' + ctx.parsed.x.toFixed(3) + '  →  later: ' + ctx.parsed.y.toFixed(3);
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          min: diagMin, max: diagMax,
+          title: { display: true, text: 'Earlier period (sorted, {{ ud_unit }})', color: CH_TEXT },
+          ticks: { color: CH_TEXT },
+          grid:  { color: CH_GRID },
+        },
+        y: {
+          min: diagMin, max: diagMax,
+          title: { display: true, text: 'Later period (sorted, {{ ud_unit }})', color: CH_TEXT },
+          ticks: { color: CH_TEXT },
+          grid:  { color: CH_GRID },
+        }
+      }
+    }
   });
 })();
 </script>

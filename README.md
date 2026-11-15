@@ -131,6 +131,7 @@ tidemark compare --location <name> --location <name> --var <variable>
 | `skin-temp` | TS | C | NASA POWER | 1981 |
 | `rainfall` | PRECTOTCORR | mm/day | GPM IMERG | 2001 |
 | `ndvi` | MOD13Q1 | ratio | ORNL DAAC MODIS | 2000 |
+| `aod` | MOD08_M3 | unitless | NASA LAADS DAAC MODIS | 2002 |
 | `lst` | MOD11A2.061 | C | AppEEARS MODIS | 2001 |
 | `et` | MOD16A2.061 | mm/day | AppEEARS MODIS | 2001 |
 
@@ -144,6 +145,7 @@ Tidemark applies the following statistical methods automatically:
 | MKC3 third-order cumulant correction | Skewed residuals (&#124;skewness&#124; > 0.5, n ≥ 20) | Then et al. 2025 |
 | Partial Mann-Kendall with ENSO control | When ENSO coverage ≥ 80% of period | Libiseller & Grimvall 2002 |
 | AREP e-process | Sequential evidence accumulation | Ramdas et al. 2023 |
+| Innovative Trend Analysis (ITA) | When extremes diverge (low and high tercile slopes have opposite signs) | Şen 2012 |
 
 **MKC3** (Then, W., Hashim, R., and Alias, N.E., *Scientific Reports* 2025) corrects a systematic false-positive bias in Hamed-Rao for right-skewed series. For Cairo precipitation (skewness≈1.95), Hamed-Rao gives p≈0.03 (significant); MKC3 gives p>0.10 (not significant, correct). No Python package implements this; Tidemark is the first open implementation.
 

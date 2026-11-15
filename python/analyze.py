@@ -42,15 +42,15 @@ _load_dotenv()
 
 from changepoint import pettitt_changepoint
 from decompose   import enso_correct, fetch_enso
-from fetch       import (APPEEARS_PARAMS, COMPOUND_PARAMS, MODIS_PARAMS,
-                         compute_compound_series, fetch_monthly,
+from fetch       import (APPEEARS_PARAMS, COMPOUND_PARAMS, LAADS_PARAMS,
+                         MODIS_PARAMS, compute_compound_series, fetch_monthly,
                          fetch_oni_annual, monthly_to_annual, monthly_to_annual_min)
 from milestones  import compute_milestones
 from records     import record_rate
 from seasonal    import run_seasonal_mk
 from stats       import (compute_arep, compute_efficiency_metrics, compute_residuals,
-                         detection_floor, lag1_acf, mk_z_mkc3, partial_mk,
-                         run_mannkendall)
+                         detection_floor, ita_analysis, lag1_acf, mk_z_mkc3,
+                         partial_mk, run_mannkendall)
 from trajectory  import compute_pvalue_series, compute_trajectory
 
 
@@ -110,6 +110,9 @@ def analyse(vals, years, param, last_year, monthly_by_year=None, progress=None, 
 
     arep        = compute_arep(vals, residuals, slope, phi, eff)
 
+    ita_raw = ita_analysis(vals)
+    ita = ita_raw if (ita_raw["low_slope"] * ita_raw["high_slope"] < 0) else None
+
     pmk = None
     if oni is not None:
         oni_aligned = np.array([oni[yr] for yr in years if yr in oni])
@@ -137,6 +140,7 @@ def analyse(vals, years, param, last_year, monthly_by_year=None, progress=None, 
         "significant":     significant,
         "method":          method,
         "partial_mk":      pmk,
+        "ita":             ita,
         "sigma_n":         sigma_n,
         "phi":             round(phi, 4),
         "detection_floor": floor,
@@ -178,7 +182,7 @@ def main():
         if args.var in COMPOUND_PARAMS:
             annual          = compute_compound_series(args.lat, args.lon, args.var, args.start, args.end)
             monthly_by_year = None
-        elif args.var in MODIS_PARAMS or args.var in APPEEARS_PARAMS:
+        elif args.var in MODIS_PARAMS or args.var in APPEEARS_PARAMS or args.var in LAADS_PARAMS:
             # satellite composites: cloud cover or processing gaps may leave some months missing
             monthly_by_year = fetch_monthly(args.lat, args.lon, args.var, args.start, args.end)
             annual          = monthly_to_annual_min(monthly_by_year, min_months=6)

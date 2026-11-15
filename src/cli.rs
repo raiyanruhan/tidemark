@@ -142,8 +142,9 @@ fn resolve_variable(input: &str) -> Result<(&'static str, &'static str, &'static
         "ndvi" | "vegetation" | "vegetation-index"              => Ok(("NDVI",       "ratio",       "vegetation index")),
         "lst"  | "land-surface-temperature" | "land-surface-temp" => Ok(("LST",      "\u{00b0}C",   "land surface temperature")),
         "et"   | "evapotranspiration-modis" | "et-modis"          => Ok(("ET_MOD16", "mm/day",      "evapotranspiration (MODIS)")),
+        "aod"  | "aerosol" | "aerosol-optical-depth" | "mod08"   => Ok(("MOD08_M3", "unitless",    "aerosol optical depth (MODIS)")),
         _ => Err(format!(
-            "unknown variable '{}'. valid: rainfall, temperature, max-temperature, min-temperature, humidity, evaporation, wind, vpd, dtr, soil, surface-soil, profile-soil, frost, soil-temp, skin-temp, ndvi, lst, et",
+            "unknown variable '{}'. valid: rainfall, temperature, max-temperature, min-temperature, humidity, evaporation, wind, vpd, dtr, soil, surface-soil, profile-soil, frost, soil-temp, skin-temp, ndvi, lst, et, aod",
             input
         )),
     }
@@ -204,7 +205,7 @@ fn spawn_python(script: &Path, lat: f64, lon: f64, param: &str, start: u32, end:
         let out = match rx.recv_timeout(Duration::from_secs(600)) {
             Ok(Ok(o))  => o,
             Ok(Err(e)) => return Err(format!("failed to wait on Python: {e}")),
-            Err(_)     => return Err("timed out after 600s. First fetch for ndvi/lst/et is slow (AppEEARS async task, see ~/.tidemark/cache/). Other variables should complete in <60s.".to_string()),
+            Err(_)     => return Err("timed out after 600s. First fetch for ndvi/lst/et is slow (AppEEARS async task); aod (MOD08_M3) first fetch ~2min; see ~/.tidemark/cache/. Other variables complete in <60s.".to_string()),
         };
 
         // MS Store Python alias exits 9009, not ENOENT

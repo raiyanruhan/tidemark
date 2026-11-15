@@ -27,6 +27,10 @@ GESDISC_PARAMS = frozenset({"PRECTOTCORR"})
 # APPEEARS_PARAMS: fetched from NASA AppEEARS (MODIS, Earthdata auth, async).
 APPEEARS_PARAMS = frozenset({"LST", "ET_MOD16"})
 
+# LAADS_PARAMS: fetched from NASA LAADS DAAC via CMR + OPeNDAP ASCII (Earthdata auth).
+# MOD08_M3: MODIS Terra monthly 1-degree gridded aerosol optical depth.
+LAADS_PARAMS = frozenset({"MOD08_M3"})
+
 PARAM_META = {
     "T2M":         ("temperature",                  "degC"),
     "T2M_MAX":     ("max temperature",              "degC"),
@@ -46,6 +50,7 @@ PARAM_META = {
     "NDVI":        ("vegetation index",             "ratio"),
     "LST":         ("land surface temperature",     "degC"),
     "ET_MOD16":    ("evapotranspiration (MODIS)",   "mm/day"),
+    "MOD08_M3":    ("aerosol optical depth",        "unitless"),
 }
 
 
@@ -69,6 +74,10 @@ def fetch_monthly(lat, lon, param, start, end, progress=None):
     if param in APPEEARS_PARAMS:
         from fetch_appeears import fetch_appeears_monthly
         return fetch_appeears_monthly(lat, lon, param, start, end, progress)
+
+    if param in LAADS_PARAMS:
+        from fetch_laads import fetch_aod_monthly
+        return fetch_aod_monthly(lat, lon, start, end, progress)
 
     resp = requests.get(
         POWER_URL,

@@ -39,7 +39,7 @@ from flask import Flask, render_template, request, jsonify, Response, stream_wit
 from analyze   import analyse
 from fetch     import (fetch_monthly, monthly_to_annual, monthly_to_annual_min,
                        compute_compound_series, APPEEARS_PARAMS,
-                       COMPOUND_PARAMS, MODIS_PARAMS, GESDISC_PARAMS)
+                       COMPOUND_PARAMS, GESDISC_PARAMS, LAADS_PARAMS, MODIS_PARAMS)
 from decompose import fetch_enso, enso_correct
 
 app = Flask(__name__)
@@ -129,6 +129,7 @@ VARIABLES = [
     ("ndvi",               "NDVI",        "Vegetation Index (NDVI)",   "ratio",    2000),
     ("lst",                "LST",         "Land Surface Temp (MODIS)", "degC",     2001),
     ("et",                 "ET_MOD16",    "Evapotranspiration (MODIS)","mm/day",   2001),
+    ("aod",                "MOD08_M3",    "Aerosol Optical Depth (MODIS)", "unitless", 2002),
 ]
 
 _VAR_EPOCH = {code: epoch for _, code, _, _, epoch in VARIABLES}
@@ -158,6 +159,7 @@ _DIR_WORDS = {
     "GWETROOT":    ("rising",        "dropping"),
     "LST":         ("rising",        "cooling"),
     "ET_MOD16":    ("increasing",    "decreasing"),
+    "MOD08_M3":    ("rising",        "falling"),
 }
 
 
@@ -252,6 +254,33 @@ def generate_summary(result, display, label, unit):
                 f"here and are {enso_effect} the underlying trend."
             )
 
+    if code == "MOD08_M3":
+        if significant:
+            sentences.append(
+                "Aerosol Optical Depth measures how much sunlight is blocked by particles "
+                "(pollution, dust, smoke) in the atmosphere. A rising trend means the air "
+                "column above this location is becoming more opaque over time."
+            )
+        else:
+            sentences.append(
+                "Aerosol Optical Depth (MODIS MOD08_M3) captures pollution, dust, and smoke "
+                "particles in the air column. The trend is not yet statistically confirmed "
+                "at this location."
+            )
+
+    ita = result.get("ita")
+    if ita:
+        low_s  = ita["low_slope"]
+        high_s = ita["high_slope"]
+        low_dir  = "drying" if low_s < 0 else "rising"
+        high_dir = "intensifying" if high_s > 0 else "weakening"
+        sentences.append(
+            f"Innovative Trend Analysis reveals the extremes are pulling apart: "
+            f"the driest years are {low_dir} ({low_s:+.4f} {unit_prose}/yr) while "
+            f"the wettest years are {high_dir} ({high_s:+.4f} {unit_prose}/yr). "
+            f"The standard Mann-Kendall test sees only the net signal and misses this divergence."
+        )
+
     return sentences
 
 
@@ -299,7 +328,7 @@ def _run_full(lat, lon, code, start, end, progress=None, cancel=None):
     if code in COMPOUND_PARAMS:
         annual          = compute_compound_series(lat, lon, code, start, end)
         monthly_by_year = None
-    elif code in MODIS_PARAMS or code in APPEEARS_PARAMS:
+    elif code in MODIS_PARAMS or code in APPEEARS_PARAMS or code in LAADS_PARAMS:
         monthly_by_year = fetch_monthly(lat, lon, code, start, end, progress)
         annual          = monthly_to_annual_min(monthly_by_year, min_months=6)
         if len(annual) < 10:

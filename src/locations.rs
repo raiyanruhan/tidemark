@@ -53,4 +53,6 @@ static LOCATIONS: &[(&[&str], f64, f64, &str)] = &[
     (&["sao paulo", "saopaulo"],  -23.55, -46.63,  "Sao Paulo, Brazil"),
     (&["buenos aires", "buenosaires"], -34.60, -58.38, "Buenos Aires, Argentina"),
     (&["sydney"],                 -33.87, 151.21,  "Sydney, Australia"),
+    (&["madison", "wisconsin"],   43.07, -89.40,  "Madison, Wisconsin, USA"),
+    (&["chicago"],                41.88, -87.63,  "Chicago, USA"),
 ];
