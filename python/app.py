@@ -242,6 +242,32 @@ def generate_summary(result, display, label, unit):
                 f"suggesting the rate may have shifted at that point."
             )
 
+    bocpd = result.get("bocpd") or {}
+    if bocpd.get("changepoint_detected") and bocpd.get("changepoint_year"):
+        cp_yr   = bocpd["changepoint_year"]
+        conf_pct = round(bocpd.get("changepoint_confidence", 0) * 100)
+        sb = bocpd.get("slope_before")
+        sa = bocpd.get("slope_after")
+        if sb is not None and sa is not None and abs(sb) > 1e-9:
+            ratio = abs(sa) / abs(sb)
+            if sb * sa < 0:
+                rate_note = f"and the trend reversed sign"
+            elif ratio >= 1.5:
+                rate_note = f"and the rate steepened {ratio:.1f}×"
+            elif ratio <= 0.67:
+                rate_note = f"and the rate weakened {1/ratio:.1f}×"
+            else:
+                rate_note = "with little change in rate"
+            sentences.append(
+                f"A Bayesian changepoint analysis detects a structural break around {cp_yr} "
+                f"({conf_pct}% confidence) {rate_note} after that year."
+            )
+        else:
+            sentences.append(
+                f"A Bayesian changepoint analysis detects a structural break around {cp_yr} "
+                f"({conf_pct}% confidence)."
+            )
+
     enso = result.get("enso_correction") or {}
     if enso.get("available"):
         frac    = enso.get("enso_fraction", 0)
