@@ -6,6 +6,8 @@ MAM/JJA/SON: same-year grouping.
 import numpy as np
 import pymannkendall as mk
 
+from fetch import contiguous_run
+
 _SAME_YEAR_SEASONS = [
     ("MAM", [3, 4, 5]),
     ("JJA", [6, 7, 8]),
@@ -46,6 +48,7 @@ def run_seasonal_mk(monthly_by_year):
     seasonal_data = monthly_to_seasonal(monthly_by_year)
     results = {}
     for name, series in seasonal_data.items():
+        series, _ = contiguous_run(series)   # Sen slope is per index = per year only without gaps
         if len(series) < 10:
             continue
         sv  = np.array([v for _, v in series])

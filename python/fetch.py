@@ -99,26 +99,98 @@ def fetch_monthly(lat, lon, param, start, end, progress=None):
     return by_year
 
 
+class SeriesError(RuntimeError):
+    """The monthly data cannot support a trustworthy annual series."""
+
+
+MIN_OBS_PER_CALENDAR_MONTH = 3
+
+
+def monthly_to_annual_min(monthly_by_year, min_months=12):
+    """
+    Annual series [(year, value)] from monthly values, safe for partial years.
+
+    Completeness rule: a calendar year is kept only if it has >= min_months
+    valid months. This applies to every year alike, including the current,
+    still-running year (so it is dropped until it has min_months months).
+
+    Annual value: a missing month must not shift the mean, so each kept year is
+    fitted by the additive two-way model  x[y, m] = a[y] + c[m]  (a[y] the year
+    level, c[m] the climatology of calendar month m), solved by alternating
+    means over the observed cells. The value returned is a[y] with c centred,
+    i.e. the mean of the 12 calendar months for that year. For a year with all
+    12 months, a[y] is exactly the plain mean, so gap-free series are unchanged.
+    The fit uses only the kept years. Every calendar month needs at least
+    MIN_OBS_PER_CALENDAR_MONTH observations or SeriesError is raised.
+    """
+    years = sorted(y for y, m in monthly_by_year.items() if len(m) >= min_months)
+    if not years:
+        return []
+    X = np.full((len(years), 12), np.nan)
+    for i, y in enumerate(years):
+        for mo, v in monthly_by_year[y].items():
+            if 1 <= mo <= 12:
+                X[i, mo - 1] = v
+    obs = ~np.isnan(X)
+    if (obs.sum(axis=0) < MIN_OBS_PER_CALENDAR_MONTH).any():
+        raise SeriesError("some calendar months have too few observations "
+                          "to build a seasonal climatology")
+    if obs.all():
+        return [(y, float(X[i].mean())) for i, y in enumerate(years)]
+
+    Xz = np.where(obs, X, 0.0)
+    a = np.nansum(np.where(obs, X, np.nan), axis=1) / obs.sum(axis=1)
+    c = np.zeros(12)
+    for _ in range(500):
+        c_new = (Xz - a[:, None] * obs).sum(axis=0) / obs.sum(axis=0)
+        c_new -= c_new.mean()
+        a_new = (Xz - c_new[None, :] * obs).sum(axis=1) / obs.sum(axis=1)
+        done = max(np.abs(a_new - a).max(), np.abs(c_new - c).max()) < 1e-12
+        a, c = a_new, c_new
+        if done:
+            break
+    return [(y, float(a[i])) for i, y in enumerate(years)]
+
+
 def monthly_to_annual(monthly_by_year):
-    annual = []
-    for year in sorted(monthly_by_year):
-        m = monthly_by_year[year]
-        if len(m) == 12:
-            annual.append((year, float(np.mean(list(m.values())))))
-    return annual
+    """Annual means of fully observed calendar years (12 months)."""
+    return monthly_to_annual_min(monthly_by_year, min_months=12)
 
 
-def monthly_to_annual_min(monthly_by_year, min_months=6):
+def contiguous_run(annual):
     """
-    Like monthly_to_annual but accepts years with >= min_months valid months.
-    Used for MODIS NDVI where monsoon cloud cover may gap some calendar months.
+    Trim an annual series [(year, value)] to one run of consecutive calendar
+    years. The Sen slope, residuals, detrending, changepoint and projections all
+    treat the array index as the time axis (1 step = 1 year), which is only true
+    without gaps, so a gappy series is never passed on. Keeps the longest run
+    (the most recent one on a tie).
+    Returns (run, dropped_years).
     """
-    annual = []
-    for year in sorted(monthly_by_year):
-        m = monthly_by_year[year]
-        if len(m) >= min_months:
-            annual.append((year, float(np.mean(list(m.values())))))
-    return annual
+    if not annual:
+        return [], []
+    best_lo = best_hi = lo = 0
+    for i in range(1, len(annual) + 1):
+        if i == len(annual) or annual[i][0] != annual[i - 1][0] + 1:
+            if i - lo >= best_hi - best_lo:
+                best_lo, best_hi = lo, i
+            lo = i
+    run = annual[best_lo:best_hi]
+    kept = {y for y, _ in run}
+    return run, [y for y, _ in annual if y not in kept]
+
+
+def satellite_annual(monthly_by_year):
+    """
+    Annual series for satellite composites (cloud / processing gaps leave months
+    missing): >= 9 months per year, relaxed to 6 and then 4 if fewer than 10
+    years qualify, then trimmed to a contiguous run. Returns (annual, info).
+    """
+    for min_months in (9, 6, 4):
+        annual = monthly_to_annual_min(monthly_by_year, min_months=min_months)
+        run, dropped = contiguous_run(annual)
+        if len(run) >= 10:
+            break
+    return run, {"min_months": min_months, "dropped_years": dropped}
 
 
 def fetch_monthly_multi(lat, lon, params, start, end):
@@ -226,3 +298,22 @@ def compute_compound_series(lat, lon, var, start, end):
         return [(y, float(np.mean(list(mm["T2M_RANGE"][y].values()))))
                 for y in _complete_years(mm, ["T2M_RANGE"])]
     raise ValueError(f"unknown compound variable: {var}")
+
+
+def load_annual(lat, lon, var, start, end, progress=None):
+    """
+    Fetch var and build its annual series on consecutive calendar years.
+    Returns (annual, monthly_by_year_or_None, info); monthly_by_year is only
+    returned where seasonal tests are meaningful (not compound or satellite).
+    info: {"min_months": months a year needs, "dropped_years": years removed
+    because a gap split the series}.
+    """
+    if var in COMPOUND_PARAMS:
+        annual, dropped = contiguous_run(compute_compound_series(lat, lon, var, start, end))
+        return annual, None, {"min_months": 12, "dropped_years": dropped}
+    monthly = fetch_monthly(lat, lon, var, start, end, progress)
+    if var in MODIS_PARAMS or var in APPEEARS_PARAMS or var in LAADS_PARAMS:
+        annual, info = satellite_annual(monthly)
+        return annual, None, info   # composite gaps make single months unreliable
+    annual, dropped = contiguous_run(monthly_to_annual(monthly))
+    return annual, monthly, {"min_months": 12, "dropped_years": dropped}

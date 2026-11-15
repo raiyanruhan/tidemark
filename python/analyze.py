@@ -42,9 +42,7 @@ _load_dotenv()
 
 from changepoint import trend_break_test
 from decompose   import enso_correct, fetch_enso
-from fetch       import (APPEEARS_PARAMS, COMPOUND_PARAMS, LAADS_PARAMS,
-                         MODIS_PARAMS, compute_compound_series, fetch_monthly,
-                         fetch_oni_annual, monthly_to_annual, monthly_to_annual_min)
+from fetch       import load_annual
 from milestones  import compute_milestones
 from records     import record_rate
 from seasonal    import run_seasonal_mk
@@ -77,6 +75,8 @@ def analyse(vals, years, param, last_year, monthly_by_year=None, progress=None, 
             progress(msg)
 
     n   = len(vals)
+    if any(b - a != 1 for a, b in zip(years, years[1:])):
+        raise ValueError("annual series has gaps; time axis would not be calendar years")
     emit("running Mann-Kendall test...")
     v           = mk_verdict(vals)
     res         = v["res"]
@@ -172,19 +172,8 @@ def main():
     args = parse_args()
 
     try:
-        if args.var in COMPOUND_PARAMS:
-            annual          = compute_compound_series(args.lat, args.lon, args.var, args.start, args.end)
-            monthly_by_year = None
-        elif args.var in MODIS_PARAMS or args.var in APPEEARS_PARAMS or args.var in LAADS_PARAMS:
-            # satellite composites: cloud cover or processing gaps may leave some months missing
-            monthly_by_year = fetch_monthly(args.lat, args.lon, args.var, args.start, args.end)
-            annual          = monthly_to_annual_min(monthly_by_year, min_months=6)
-            if len(annual) < 10:
-                annual = monthly_to_annual_min(monthly_by_year, min_months=4)
-            monthly_by_year = None   # skip seasonal MK; composite gaps make months unreliable
-        else:
-            monthly_by_year = fetch_monthly(args.lat, args.lon, args.var, args.start, args.end)
-            annual          = monthly_to_annual(monthly_by_year)
+        annual, monthly_by_year, series_info = load_annual(
+            args.lat, args.lon, args.var, args.start, args.end)
     except RuntimeError as exc:
         print(json.dumps({"error": str(exc)}))
         sys.exit(1)
@@ -210,6 +199,7 @@ def main():
         "start_year": years[0],
         "end_year":   last_year,
         "n_years":    len(vals),
+        "series":     series_info,
     })
 
     # --- ENSO correction ---

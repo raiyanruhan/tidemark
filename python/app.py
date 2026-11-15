@@ -39,7 +39,7 @@ from flask import Flask, render_template, request, jsonify, Response, stream_wit
 _DATA_END_YEAR = 2025
 
 from analyze   import analyse
-from fetch     import (fetch_monthly, monthly_to_annual, monthly_to_annual_min,
+from fetch     import (load_annual, fetch_monthly, monthly_to_annual, monthly_to_annual_min,
                        compute_compound_series, APPEEARS_PARAMS,
                        COMPOUND_PARAMS, GESDISC_PARAMS, LAADS_PARAMS, MODIS_PARAMS)
 from decompose import fetch_enso, enso_correct
@@ -349,18 +349,7 @@ def _run_full(lat, lon, code, start, end, progress=None, cancel=None):
             raise _Cancelled()
 
     emit(f"fetching data for {lat:.2f}, {lon:.2f}...")
-    if code in COMPOUND_PARAMS:
-        annual          = compute_compound_series(lat, lon, code, start, end)
-        monthly_by_year = None
-    elif code in MODIS_PARAMS or code in APPEEARS_PARAMS or code in LAADS_PARAMS:
-        monthly_by_year = fetch_monthly(lat, lon, code, start, end, progress)
-        annual          = monthly_to_annual_min(monthly_by_year, min_months=6)
-        if len(annual) < 10:
-            annual = monthly_to_annual_min(monthly_by_year, min_months=4)
-        monthly_by_year = None
-    else:
-        monthly_by_year = fetch_monthly(lat, lon, code, start, end, progress)
-        annual          = monthly_to_annual(monthly_by_year)
+    annual, monthly_by_year, series_info = load_annual(lat, lon, code, start, end, progress)
 
     check_cancel()
 
@@ -386,6 +375,7 @@ def _run_full(lat, lon, code, start, end, progress=None, cancel=None):
         "lat": lat, "lon": lon, "param": code,
         "start_year": years[0], "end_year": last_year,
         "n_years": len(vals),
+        "series": series_info,
         "annual_years": years,
         "annual_vals":  [round(float(v), 4) for v in vals],
     })
