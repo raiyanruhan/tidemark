@@ -149,7 +149,7 @@ def compute_pvalue_series(vals, years, last_year):
     """
     Historical p-value curve from actual data slices, plus analytical projection forward.
     historical: original_test on vals[:n] for n from start to len(vals).
-    projected: z(n) = z0 * (n/n0)^(2/3), p from normal CDF, forward 60 years.
+    projected: z(n) = z0 * (n/n0)^(3/2), p from normal CDF, forward 60 years.
     Projected series only included if current p > 0.05.
     """
     n     = len(vals)
@@ -171,7 +171,7 @@ def compute_pvalue_series(vals, years, last_year):
         n0 = float(n)
         for step in range(1, 61):
             n_fut = n0 + step
-            z_fut = z0 * (n_fut / n0) ** (2.0 / 3.0)
+            z_fut = z0 * (n_fut / n0) ** 1.5
             p_fut = float(2.0 * stats.norm.sf(abs(z_fut)))
             projected_years.append(last_year + step)
             projected_pvals.append(p_fut)
