@@ -37,7 +37,8 @@ MODIS_EPOCH   = 2001
 
 # AppEEARS applies scale factors before returning values.
 # LST: returns Kelvin (raw DN * 0.02). Fill raw=0 -> 0.0 K.
-# ET:  returns mm/8day (raw DN * 0.1). Fill raw=32767 -> 3276.7.
+# ET:  returns mm per composite (raw DN * 0.1; sum over 8 days, 5/6 for the
+#      last composite of a year). Fill raw=32767 -> 3276.7.
 _PRODUCTS = {
     "LST": {
         "product":     "MOD11A2.061",
@@ -53,7 +54,11 @@ _PRODUCTS = {
         "fill_above":  3000.0,  # raw 32767 * 0.1 = 3276.7; flag fill
         "fill_below":  -50.0,   # negative ET is rare but possible (condensation)
         "offset":      0.0,
-        "unit_factor": 1.0 / 8.0,  # mm/8day -> mm/day
+        "unit_factor": 1.0,
+        # ET is a SUM over the composite period (MOD16 User Guide V6.1). The
+        # last composite of each year (DOY 361) spans only 5 days (6 in leap
+        # years), so divide by the true composite length, not a fixed 8.
+        "per_composite_day": True,
     },
 }
 
@@ -173,14 +178,23 @@ def _download_csv(token, task_id):
     return dl_resp.text
 
 
+def _composite_days(year, doy):
+    """Length in days of the 8-day composite starting at day-of-year doy.
+    The last composite of a year is truncated at Dec 31 (5 days, 6 in leap years)."""
+    days_in_year = 366 if (year % 4 == 0 and (year % 100 != 0 or year % 400 == 0)) else 365
+    return min(8, days_in_year - doy + 1)
+
+
 def _parse_csv_to_monthly(csv_text, product, layer, fill_above, fill_below,
-                           offset, unit_factor):
+                           offset, unit_factor, per_composite_day=False):
     """
     Parse AppEEARS point CSV into {year: {month: physical_value}}.
 
     AppEEARS column name is '{product_no_dots}_{layer}' (no _0 suffix).
     Multiple 8-day composites per calendar month are averaged.
     Scale factor already applied by AppEEARS; values are physical units.
+    per_composite_day: value is a sum over the composite; convert to per-day by
+    dividing by the actual composite length (5/6 days for the year's last one).
     """
     prod_safe = product.replace(".", "_")
     # try variants: with and without _0 suffix, with and without dot replacement
@@ -212,13 +226,16 @@ def _parse_csv_to_monthly(csv_text, product, layer, fill_above, fill_below,
         try:
             # AppEEARS uses YYYY-MM-DD
             if len(date_str) == 10 and date_str[4] == "-":
-                year  = int(date_str[:4])
-                month = int(date_str[5:7])
+                dt    = datetime.date(int(date_str[:4]), int(date_str[5:7]),
+                                      int(date_str[8:10]))
+                year, month = dt.year, dt.month
+                doy   = dt.timetuple().tm_yday
             # fallback: YYYYDDD Julian
             elif len(date_str) == 7:
                 dt    = datetime.datetime.strptime(date_str, "%Y%j")
                 year  = dt.year
                 month = dt.month
+                doy   = dt.timetuple().tm_yday
             else:
                 continue
         except (ValueError, IndexError):
@@ -232,7 +249,10 @@ def _parse_csv_to_monthly(csv_text, product, layer, fill_above, fill_below,
         if val >= fill_above or val <= fill_below:
             continue
 
-        physical = val * unit_factor + offset
+        if per_composite_day:
+            physical = val / _composite_days(year, doy) * unit_factor + offset
+        else:
+            physical = val * unit_factor + offset
         buckets.setdefault((year, month), []).append(physical)
 
     by_year = {}
@@ -358,6 +378,7 @@ def fetch_appeears_monthly(lat, lon, var_key, start_year, end_year, progress=Non
         fill_below=cfg["fill_below"],
         offset=cfg["offset"],
         unit_factor=cfg["unit_factor"],
+        per_composite_day=cfg.get("per_composite_day", False),
     )
 
     # save result cache and clean up task-id cache
