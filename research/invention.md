@@ -281,3 +281,56 @@ interpretation: anthropogenic drying trend exists, masked by ENSO in raw test
 
 Implemented: `partial_mk(x, q)` in `python/stats.py`. Wired in `python/analyze.py` and
 `python/app.py`. Output: `print_partial_mk_line()` in `src/output.rs`.
+
+---
+
+### Innovative Trend Analysis: sub-population divergence (Şen 2012)
+
+Mann-Kendall tests the net monotonic signal. It cannot detect:
+- Driest years drying while wettest years are intensifying (net ≈ 0, ITA reveals the fork)
+- A trend confined to one value range (high or low extremes only)
+- A trend that changed direction mid-record
+
+ITA splits the series into two equal halves, sorts each in ascending order, and plots first
+half (x-axis) vs second half (y-axis). Points above the 1:1 diagonal mean the later period
+is higher. The three tercile clusters (low / mid / high values) are computed separately, so
+diverging extremes are visible even when the net slope is near zero.
+
+Output (web):
+```
+extreme trend structure (ITA, Şen 2012):
+  low-value years    -0.021 mm/day/yr   (driest years getting drier)
+  mid-value years    +0.001 mm/day/yr   (average years stable)
+  high-value years   +0.013 mm/day/yr   (wettest years wetter)
+  intensification of extremes — MK tau tests only the net monotonic signal
+```
+
+**No other tool shows the sub-population trend structure. For climate science, the
+intensification of extremes is often more important than the mean trend.**
+
+Implemented: `ita_analysis(x)` in `python/stats.py`. Wired in `python/analyze.py`
+(gated on `low_slope * high_slope < 0`). Web: scatter plot in `python/templates/result.html`
+showing three colored tercile clusters against 1:1 diagonal; shown only when extremes diverge.
+
+---
+
+### AOD variable: MODIS MOD08_M3 aerosol optical depth
+
+Aerosol Optical Depth (550nm) from MODIS Terra monthly 1-degree gridded atmosphere product.
+Dr. James Aker's exact demo variable in the NASA Space Apps challenge video.
+
+```
+$ tidemark analyze --location madison --var aod
+```
+
+Fetched via NASA CMR (granule catalog, no auth) → OPeNDAP ASCII per pixel (Earthdata auth).
+No HDF4 library required — OPeNDAP returns plain text. Same `NASA_EARTHDATA_USERNAME` /
+`NASA_EARTHDATA_PASSWORD` env vars as GPM precipitation.
+
+Grid: 1×1° global (180 lat × 360 lon). Fill check: raw > 32000 or raw < −100 → None.
+Scale: × 0.001 (unitless). Coverage: 2002-present.
+
+Implemented: `python/fetch_laads.py` (new). Wired in `python/fetch.py` (`LAADS_PARAMS`),
+`python/app.py` (VARIABLES, `_run_full` routing), `python/analyze.py` (satellite-gap path).
+Rust: `aod`/`aerosol`/`mod08` aliases in `src/cli.rs`; `madison`/`wisconsin` location in
+`src/locations.rs`.

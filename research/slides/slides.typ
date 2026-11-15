@@ -118,8 +118,9 @@
     table.hline(stroke: 0.5pt),
     [POWER / MERRA-2], [temp, wind, humidity, soil], [1981–now],
     [GES DISC GPM IMERG], [precipitation], [2001–now],
-    [AppEEARS MODIS], [land surface temp], [2001–now],
+    [AppEEARS MODIS], [land surface temp, ET], [2001–now],
     [ORNL DAAC MODIS], [NDVI vegetation], [2000–now],
+    [LAADS DAAC MODIS], [aerosol optical depth], [2002–now],
     table.hline(),
   )
 
@@ -131,13 +132,15 @@
 
   + Rust CLI resolves location → lat/lon
   + Python fetches from correct NASA API
-  + Hamed-Rao MK · Sen's slope · Pettitt changepoint
+  + MKC3-corrected MK · Sen's slope · Pettitt changepoint
+  + ENSO separation (partial MK, rank-based)
+  + ITA: sub-population slopes (extremes divergence)
   + Monte Carlo bootstrap projects detection year
   + Milestones computed once significant
 
   #v(0.3em)
   Up to *45 years* of Earth observation data. \
-  *Any region on Earth.*
+  *Any region on Earth. 19 variables.*
 ]
 
 // Slide 5: Significance trajectory — the core invention
@@ -229,7 +232,86 @@
 #v(0.4em)
 #text(size: 0.8em, style: "italic")[All from live NASA API calls.]
 
-// Slide 7: Closing
+// Slide 7: ITA — sub-population divergence
+== When Extremes Pull Apart
+
+#cols[
+  *Mann-Kendall tests only the net trend.*
+
+  #v(0.3em)
+
+  When driest years get drier and wettest years
+  get wetter simultaneously, the net slope is
+  near zero. MK says "no trend." The finding
+  that matters is invisible.
+
+  #v(0.5em)
+
+  *Innovative Trend Analysis (Şen 2012)*
+  splits the record into two halves and compares
+  sorted pairs rank by rank — revealing which
+  part of the value range is driving change.
+][
+  ```
+  extreme trend structure (ITA):
+    low-value years   -0.021 mm/day/yr
+    mid-value years   +0.001 mm/day/yr
+    high-value years  +0.013 mm/day/yr
+
+    intensification of extremes
+    MK tau sees only the net signal
+  ```
+
+  #v(0.3em)
+  #text(size: 0.8em)[Shown when low and high tercile \
+  slopes have opposite signs. Scatter plot included.]
+]
+
+// Slide 8: AOD — Dr. Acker callback
+== Dr. Acker's Variable, Live
+
+#cols[
+  #text(size: 0.88em, style: "italic")[
+    "Aerosol optical depth... I'm looking at \
+    Wisconsin here..."
+  ]
+
+  #v(0.3em)
+  #text(size: 0.78em)[— Dr. James Aker, NASA Goddard, \
+  Space Apps 2026 challenge video]
+
+  #v(0.5em)
+
+  *Wisconsin, right now:*
+
+  ```
+  $ tidemark analyze \
+      --location madison \
+      --var aod
+  ```
+
+  MODIS MOD08_M3 · 2002–2025 · 23 years \
+  MKC3 correction applied if skewed
+][
+  *Data: MODIS MOD08_M3 V6.1*
+
+  #v(0.3em)
+
+  - Monthly 1° × 1° gridded AOD at 550nm
+  - NASA LAADS DAAC via CMR + OPeNDAP
+  - Same Earthdata login as precipitation
+  - No new dependencies
+
+  #v(0.3em)
+
+  Full pipeline: MK test + significance trajectory +
+  detection floor + 4-method crossing year +
+  ENSO separation + ITA extremes check.
+
+  #text(size: 0.78em)[Live NASA satellite data. Not synthetic.]
+]
+
+// Slide 10: Closing
 #focus-slide[
   A tool that gives policy *a year.*
 

@@ -424,6 +424,23 @@
       <hr class="p-rule--muted" />
       <div class="row p-section--shallow">
         <div class="col-3 col-medium-2">
+          <h3 class="p-heading--5">NASA LAADS DAAC</h3>
+        </div>
+        <div class="col-6 col-medium-3">
+          <p>
+            Aerosol Optical Depth comes from MODIS Terra MOD08_M3 V6.1, a monthly
+            1-degree gridded atmosphere product accessed via NASA LAADS DAAC using the
+            CMR granule catalog and OPeNDAP ASCII point queries. AOD measures how much
+            sunlight is blocked by aerosol particles — pollution, dust, and smoke — in
+            the atmospheric column above a location. Coverage from 2002.
+            Requires NASA Earthdata login (same credentials as GPM).
+          </p>
+        </div>
+      </div>
+
+      <hr class="p-rule--muted" />
+      <div class="row p-section--shallow">
+        <div class="col-3 col-medium-2">
           <h3 class="p-heading--5">Variables available</h3>
         </div>
         <div class="col-6 col-medium-3">
@@ -436,11 +453,68 @@
             <li class="p-list__item">Land surface temperature &mdash; 2001+ (MODIS)</li>
             <li class="p-list__item">Evapotranspiration &mdash; 2001+ (MODIS)</li>
             <li class="p-list__item">Vegetation index (NDVI) &mdash; 2000+ (MODIS)</li>
+            <li class="p-list__item">Aerosol Optical Depth (AOD) &mdash; 2002+ (MODIS MOD08_M3)</li>
           </ul>
           <p>
             Record length varies by variable. Temperature and humidity have up to
             45 years (1981-2025). Precipitation, land surface temperature, and
-            evapotranspiration start from 2001, giving up to 25 years.
+            evapotranspiration start from 2001, giving up to 25 years. AOD starts
+            from 2002, giving up to 23 years.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="p-section" id="ita">
+  <div class="u-fixed-width p-section--shallow">
+    <hr class="p-rule" />
+    <h2>When extremes pull apart</h2>
+  </div>
+  <div class="u-fixed-width">
+    <div class="col-start-large-4 col-9 col-medium-5 col-start-medium-2">
+      <p>
+        The Mann-Kendall test measures one thing: whether the data moves consistently in
+        one direction over time. It produces a single number — the net trend — and cannot
+        tell you whether that trend is spread evenly across all years, or whether it is
+        driven by one part of the value range while the other part moves the opposite way.
+      </p>
+      <p>
+        A concrete example: suppose the driest years at a location are getting drier
+        (slope &minus;0.021 mm/day per year) while the wettest years are getting wetter
+        (slope +0.013 mm/day per year). The net Mann-Kendall statistic is close to zero,
+        and the test reports "no significant trend." Nothing is wrong with the test — it
+        is measuring what it measures. But the finding that matters, the intensification
+        of extremes, is invisible in that number.
+      </p>
+      <p>
+        tidemark detects this using Innovative Trend Analysis (Şen, 2012). The method
+        splits the full record into two equal halves and sorts each half from driest to
+        wettest. It then compares the two sorted lists rank by rank. Points above the 1:1
+        diagonal mean the later period is higher than the earlier. Points below mean it is
+        lower. If the low-value cluster lies below the diagonal while the high-value
+        cluster lies above, the extremes are diverging.
+      </p>
+
+      <hr class="p-rule--muted" />
+      <div class="row p-section--shallow">
+        <div class="col-3 col-medium-2">
+          <h3 class="p-heading--5">What tidemark shows</h3>
+        </div>
+        <div class="col-6 col-medium-3">
+          <p>
+            When extremes diverge, tidemark shows the "Extreme trend structure" section on
+            the result page. It reports three slopes: for the driest third of years, the
+            middle third, and the wettest third. It also draws the scatter plot so you can
+            see the fork directly. The section only appears when the low-extreme slope and
+            the high-extreme slope have opposite signs. If all terciles trend in the same
+            direction, the standard Mann-Kendall result already captures it.
+          </p>
+          <p>
+            For climate policy, the intensification of extremes — more intense droughts
+            alongside more intense floods — is often more important than a change in the
+            mean. This is the only tool that shows it automatically against live NASA data.
           </p>
         </div>
       </div>

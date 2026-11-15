@@ -149,6 +149,8 @@ Tidemark applies the following statistical methods automatically:
 
 **MKC3** (Then, W., Hashim, R., and Alias, N.E., *Scientific Reports* 2025) corrects a systematic false-positive bias in Hamed-Rao for right-skewed series. For Cairo precipitation (skewness≈1.95), Hamed-Rao gives p≈0.03 (significant); MKC3 gives p>0.10 (not significant, correct). No Python package implements this; Tidemark is the first open implementation.
 
+**Innovative Trend Analysis** (Şen, Z., *Journal of Hydrological Engineering* 2012) detects non-monotonic sub-population trends that Mann-Kendall cannot see. The series is split into two halves, each sorted in ascending order, and compared rank by rank. When the driest years are drying while the wettest years are intensifying, the net MK statistic is near zero (no trend) but ITA reveals the divergence. Output includes tercile slopes (low / mid / high value years) and a scatter plot showing both halves against the 1:1 diagonal. Shown only when low and high tercile slopes have opposite signs.
+
 **Partial Mann-Kendall** (Libiseller, C. and Grimvall, A., *Environmetrics* 2002) separates the anthropogenic trend from ENSO variability using a rank-based cross-covariance framework. No parametric assumption required. Output: "trend robust to ENSO correction" / "anthropogenic trend exists, masked by ENSO" / "apparent trend may be ENSO-driven."
 
 ## Data Sources
@@ -160,6 +162,8 @@ Tidemark applies the following statistical methods automatically:
 **[NASA AppEEARS](https://appeears.earthdatacloud.nasa.gov)** - MODIS LST (MOD11A2.061) and ET (MOD16A2.061). NASA Earthdata auth required. Authorize "AppEEARS" at urs.earthdata.nasa.gov before first use. First task 2-10 min; subsequent runs instant from cache.
 
 **[ORNL DAAC MODIS](https://modis.ornl.gov/rst/api/v1/)** - MOD13Q1 250m NDVI. No authentication. 2000-present. Cached to `~/.tidemark/cache/`.
+
+**[NASA LAADS DAAC](https://ladsweb.modaps.eosdis.nasa.gov)** - MOD08_M3 V6.1 monthly 1×1° gridded Aerosol Optical Depth (AOD at 550nm). NASA Earthdata auth required. Authorize "NASA LARC ASDC" at urs.earthdata.nasa.gov before first use. Granule catalog fetched via NASA CMR; individual pixels extracted via OPeNDAP ASCII (no HDF4 library required). 2002-present. Cached to `~/.tidemark/cache/`.
 
 ## Team
 
