@@ -46,24 +46,21 @@ def _parse_mei(text, years_needed):
 
 def _parse_oni(text, years_needed):
     """
-    Parse NOAA CPC ONI ascii table (year + 12 seasonal running means).
+    Parse NOAA CPC oni.ascii.txt: rows are "SEAS YR TOTAL ANOM" (e.g. "DJF 1950 24.72 -1.53").
+    Returns the annual mean of the ANOM column for years in years_needed.
     """
-    enso = {}
+    acc = {}
     for line in text.splitlines():
-        line = line.strip()
-        if not line or not line[0].isdigit():
-            continue
         parts = line.split()
-        if len(parts) < 2:
+        if len(parts) < 4 or not (parts[1].isdigit() and len(parts[1]) == 4):
             continue
         try:
-            yr   = int(parts[0])
-            vals = [float(x) for x in parts[1:] if abs(float(x)) < 50.0]
-            if vals:
-                enso[yr] = float(np.mean(vals))
-        except (ValueError, IndexError):
+            yr, anom = int(parts[1]), float(parts[3])
+        except ValueError:
             continue
-    return {yr: enso[yr] for yr in years_needed if yr in enso}
+        if abs(anom) < 50.0:
+            acc.setdefault(yr, []).append(anom)
+    return {yr: float(np.mean(acc[yr])) for yr in years_needed if yr in acc}
 
 
 def fetch_enso(years):
