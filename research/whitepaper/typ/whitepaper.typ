@@ -149,45 +149,37 @@
   #text(size: 10pt, weight: "bold", font: "Ubuntu Sans")[Abstract]
   #v(0.4em)
   #text(size: 10pt)[
-    We present Tidemark, a command-line Earth system trend analysis tool built on six
-    novel contributions. The first is the *significance trajectory*: a probabilistic,
-    multi-method estimate of when a climate trend will cross the p#h(0.05em)<#h(0.05em)0.05
-    threshold, together with a predictive interval and projected variable state at that
-    crossing. The second is a four-method cross-validation framework combining the
-    analytical Mann-Kendall $n^(3/2)$ Z-score growth formula (derived from first principles
-    and not previously published in usable form), the Weatherhead et al. (1998) OLS
-    detection time formula with autocorrelation correction, a Monte Carlo empirical
-    bootstrap over 1,000 runs, and a Cramér-Rao lower bound from Fisher information theory
-    that sets the minimum years any test could ever require. When methods diverge by more
-    than five years, Tidemark identifies the cause and directs the user to the correct estimate. The third is
-    the detection floor: the minimum slope Mann-Kendall can resolve at 80% power for the
-    current record length, printed unconditionally to contextualize trend strength.
-    A fourth contribution is the MKC3 variance correction (Then et al., 2025), applied
-    automatically to series with $|"skewness"| > 0.5$, eliminating a systematic
-    false-positive bias in Hamed-Rao for right-skewed residuals (precipitation, NDVI, ET).
-    A fifth contribution is the partial Mann-Kendall test (Libiseller & Grimvall, 2002),
-    which separates the anthropogenic trend signal from contemporaneous ENSO variability
-    using a rank-based cross-covariance framework, answering whether a detected trend is
-    real or ENSO-driven. A sixth contribution is a Bayesian changepoint detection
-    scan using the Normal-Inverse-Gamma (NIG) closed-form marginal likelihood (Chib, 1998):
-    for every candidate split year it computes the log Bayes factor of a two-segment
-    model against the full-series model, detecting when the trend structure changed
-    with calibrated confidence.
-    Validation against NASA POWER data for Dhaka, Bangladesh (significant cooling,
-    p#h(0.05em)=#h(0.05em)0.047; Bayesian changepoint 1997, log BF = 18, 99% confidence)
-    and Cairo, Egypt (non-Gaussian precipitation, Monte Carlo crossing year 2051, 85%
-    PI 2036-2068) confirms the pipeline. Applied to Bangladesh, the full Earth system
-    scan reveals two of five variables already significant, with humidity projected to
-    cross significance around 2031 and precipitation not until 2051. The tool is
-    implemented as a Rust CLI binary with a Python statistics engine, requires no
-    authentication for POWER variables (a free NASA Earthdata account is needed for
-    precipitation and remote sensing data), and is freely reproducible from open NASA
-    data with no installation beyond standard Python packages.
+    We present Tidemark, an Earth system trend analysis tool (command line and web)
+    that answers the question standard trend tests leave open: if a trend is not yet
+    statistically significant, when is it likely to become so? Its central output is
+    the *significance trajectory*: an estimate of the year a trend will cross
+    p#h(0.05em)<#h(0.05em)0.05, from four methods: an analytical formula based on the
+    $n^(3/2)$ growth of the Mann-Kendall Z-score, the Weatherhead et al. (1998)
+    detection-time formula, a 1,000-path Monte Carlo simulation that keeps the
+    autocorrelation of the data and allows for uncertainty in the slope, and a
+    Cramér-Rao bound from Fisher information. Around it Tidemark reports a
+    *detection floor* (the smallest slope Mann-Kendall can resolve at 80% power for
+    the current record length), a test for a break in the trend line, a partial
+    Mann-Kendall test controlling for ENSO (Libiseller & Grimvall, 2002), and an
+    e-process for trend.
+    The significance verdict comes from a Mann-Kendall test whose null distribution
+    is bootstrapped from each series (AR(1) sieve bootstrap). We chose it by
+    measurement: on simulated trend-free data ($n = 45$) our original automatic
+    selection among Hamed-Rao, MKC3 (Then & Abdul Halim, 2025) and block bootstrap
+    rejected 7 to 16% of the time at a nominal 5%; the bootstrap test rejects 6 to 8%.
+    Those three corrections are still reported for comparison.
+    On NASA POWER data (1981-2025), Dhaka, Bangladesh shows a significant cooling
+    trend in 2 m air temperature ($p = 0.037$) with a break in the trend line in 1997
+    ($p = 0.006$); Cairo, Egypt precipitation is not significant ($p = 0.75$), lies at
+    0.18 of the detection floor, and the four methods disagree by decades, which the
+    tool reports rather than hides. The tool is a Rust CLI with a Python statistics
+    engine, needs no authentication for POWER variables (a free NASA Earthdata account
+    is needed for GPM and MODIS products), and is reproducible from open NASA data.
   ]
   #v(0.3em)
   #text(size: 9pt, fill: gray-6)[
     *Keywords:* Mann-Kendall, trend detection, significance trajectory, detection floor,
-    Monte Carlo, Sen's slope, Bayesian changepoint, NIG marginal likelihood, NASA POWER,
+    Monte Carlo, Sen's slope, sieve bootstrap, structural break, NASA POWER,
     Bangladesh, Earth systems, climate analysis
   ]
 ]
@@ -206,7 +198,7 @@
       columns: (2.2em, 1fr, 2.2em),
       text(fill: gray-6)[#num],
       if lnk != none { link(lnk)[#text(fill: charcoal)[#title]] } else { text(fill: charcoal)[#title] },
-      align(right, text(fill: gray-6)[#pg]),
+      align(right, text(fill: gray-6)[#if lnk != none { context counter(page).at(lnk).first() } else { pg }]),
     )
     v(0.38em)
   }
@@ -218,23 +210,23 @@
   #toc-entry("3.", [Data Sources], "6", lnk: <s-data>)
   #toc-entry("4.", [Statistical Methods], "7", lnk: <s-stats>)
   #pad(left: 2.2em)[
-    #toc-entry("4.1", [Mann-Kendall and the Hamed-Rao Correction], "7", lnk: <s-mk>)
+    #toc-entry("4.1", [The Significance Test], "7", lnk: <s-mk>)
     #toc-entry("4.2", [Sen's Slope Estimator], "8", lnk: <s-sens>)
     #toc-entry("4.3", [The Detection Floor], "9", lnk: <s-floor>)
     #toc-entry("4.4", [Four Independent Estimation Methods], "10", lnk: <s-three>)
     #toc-entry("4.5", [Divergence Detection and Diagnosis], "12", lnk: <s-div>)
     #toc-entry("4.6", [MKC3 Third-Order Cumulant Variance Correction], "13", lnk: <s-mkc3>)
     #toc-entry("4.7", [Partial Mann-Kendall with ENSO Control], "14", lnk: <s-pmk>)
-    #toc-entry("4.8", [Bayesian Changepoint Detection (NIG Marginal Likelihood)], "15", lnk: <s-bocpd>)
+    #toc-entry("4.8", [Trend-Break Detection], "15", lnk: <s-bocpd>)
   ]
   #toc-entry("5.", [Novel Contributions], "16", lnk: <s-novel>)
   #pad(left: 2.2em)[
     #toc-entry("5.1", [The Significance Trajectory], "16", lnk: <s-sigtraj>)
-    #toc-entry("5.2", [The Earth System Scan], "17", lnk: <s-scan>)
+    #toc-entry("5.2", [A System View], "17", lnk: <s-scan>)
     #toc-entry("5.3", [The Trend E-process], "18", lnk: <s-arep>)
-    #toc-entry("5.4", [MKC3 Variance Correction], "19", lnk: <s-novel-mkc3>)
+    #toc-entry("5.4", [MKC3 and Block Bootstrap Implementations], "19", lnk: <s-novel-mkc3>)
     #toc-entry("5.5", [Partial Mann-Kendall ENSO Separation], "20", lnk: <s-novel-pmk>)
-    #toc-entry("5.6", [Bayesian Changepoint Detection], "21", lnk: <s-novel-bocpd>)
+    #toc-entry("5.6", [Trend-Break Detection], "21", lnk: <s-novel-bocpd>)
   ]
   #toc-entry("6.", [Validation Results], "16", lnk: <s-valid>)
   #toc-entry("7.", [Case Study: Bangladesh], "18", lnk: <s-bd>)
@@ -254,21 +246,21 @@
 = Introduction <s-intro>
 
 Dr. James Aker of NASA Goddard Space Flight Center framed the gap in the challenge
-brief: "Sometimes all a trend needs to become significant is a longer period." Every
-existing tool ignores that sentence. The Mann-Kendall test rejects or fails to reject
+brief: "Sometimes all a trend needs to become significant is a longer period." The
+tools we surveyed do not act on that sentence. The Mann-Kendall test rejects or fails to reject
 the null hypothesis of no trend, and the result is reported as a binary: significant
 or not. Standard tools (NASA Giovanni, NOAA Climate Explorer, Copernicus CDS Toolbox)
 implement this test and stop there. What they do not report is what the result implies
 about the future.
 
-The cost of that omission is concrete. Cairo's precipitation series: not yet significant
-($p = 0.74$). The standard analytical formula returns a significance crossing year around
-2128. The correct estimate, from Monte Carlo simulation over the actual residual
-distribution, is 2051. The difference is 77 years. The standard formula assumes
-bell-curve noise. Cairo's precipitation residuals are right-skewed. Applied to skewed
-data, the formula gives a confident wrong answer. Tidemark detects this automatically,
-diagnoses the cause, and routes the user to the estimate that is valid for the actual
-noise structure of the data.
+The cost of that omission is concrete. Cairo's precipitation series (NASA POWER,
+1981-2025) is not significant ($p = 0.75$). Asked when it will be, the analytical
+formula says about 2125, the Weatherhead formula 2078, the Cramér-Rao bound 2063, and
+in the Monte Carlo simulation just over half of the 1,000 paths never reach
+significance within 80 years. The residuals are strongly right-skewed (skewness 1.95)
+and the slope is at 0.18 of the detection floor. A single number would be false
+precision here. Tidemark reports all four estimates, flags the disagreement, and
+states the reason.
 
 The binary outcome carries three pieces of information not shown:
 
@@ -293,36 +285,30 @@ $alpha = 0.05$, estimated via four independent methods with divergence detection
 an 85% Monte Carlo predictive interval. The trajectory is computed forward from the
 empirical noise distribution, requiring no Gaussian assumption.
 
-This paper makes six contributions to the Earth system trend analysis problem:
+This paper makes the following contributions to the Earth system trend analysis problem:
 
-+ The *significance trajectory concept*: a probabilistic estimate of when
-  p#h(0.05em)<#h(0.05em)0.05 will be reached, with 85% predictive interval from
-  Monte Carlo simulation and four-method cross-validation.
++ The *significance trajectory*: an estimate of when p#h(0.05em)<#h(0.05em)0.05 will be
+  reached, with an 85% predictive interval from Monte Carlo simulation and a four-method
+  cross-check.
 
-+ The *analytical $n^(3/2)$ crossing formula*: derived from the mathematical structure
-  of the Mann-Kendall test, computable in microseconds without simulation, and not
-  previously published in usable form.
++ The *analytical $n^(3/2)$ crossing formula*: derived from the structure of the
+  Mann-Kendall test and computable without simulation.
 
 + The *detection floor*: the minimum slope Mann-Kendall can detect at 80% power given
-  the current record length, printed unconditionally to contextualize every result.
+  the current record length, printed with every result.
 
-+ The *Earth system scan*: analysis of all POWER meteorological variables for a location
-  in a single command, producing a system fingerprint showing which variables are trending,
-  which are significant, and which will become significant first.
++ A *measured significance test*: the false-alarm rate of every test in the pipeline
+  was measured on simulated trend-free data, and the verdict was moved to the test
+  that came closest to its nominal rate (Section 4.1).
 
-+ The *MKC3 third-order cumulant variance correction* (Then et al., 2025): applied
-  automatically to series with $|"skewness"| > 0.5$, correcting a systematic
-  false-positive bias in Hamed-Rao for right-skewed residuals (precipitation, NDVI, ET).
++ A *trend-break test* that asks whether two straight lines fit better than one,
+  so that a steady trend is not mistaken for a changepoint (Section 4.8).
 
-+ The *partial Mann-Kendall ENSO separation* (Libiseller & Grimvall, 2002): a
-  rank-based nonparametric test of trend after removing the contemporaneous ENSO signal,
-  answering whether a detected trend is anthropogenic or ENSO-driven.
++ *ENSO separation* by regression and by the partial Mann-Kendall test
+  (Libiseller & Grimvall, 2002).
 
-+ The *Bayesian changepoint detection scan* (NIG marginal likelihood, Chib, 1998): a
-  retrospective scan of every candidate split year using the Normal-Inverse-Gamma
-  closed-form marginal likelihood, answering *when* the trend structure changed, not
-  just whether it exists. Outputs detected year, log Bayes factor, calibrated confidence,
-  and regime slopes before and after the break.
++ Open implementations of the *MKC3* (Then & Abdul Halim, 2025) and *block bootstrap*
+  (Önöz & Bayazit, 2012) Mann-Kendall variants, reported for comparison.
 
 // ============================================================
 // 2. BACKGROUND
@@ -367,25 +353,15 @@ of the rank-detrended series:
 
 $ frac(n, n_S) = 1 + frac(2, n(n-1)(n-2)) sum_(i=1)^(n-1) (n-i)(n-i-1)(n-i-2) rho_S (i) $ <eq:inflation>
 
-Hamed and Rao recommend including lags up to $L = 3$ based on empirical analysis across
-hydroclimatic series [3]. When the lag-1 autocorrelation coefficient
-$|phi_1| < 1.96 slash sqrt(n)$ (approximately 0.292 for $n = 45$), the correction
-factor approaches zero and the test reduces to the original Mann-Kendall.
+Only lags whose rank autocorrelation is significant are included; Tidemark's
+Hamed-Rao variant uses the first three lags via the pymannkendall library [6].
 
-*A known limitation of the pymannkendall implementation* [6] is that it uses
-$|rho_S(i)|$ (absolute value) in the variance inflation step. The original Hamed and
-Rao (1998) paper does not take absolute value: the correction should decrease variance
-for negative autocorrelation and increase it for positive autocorrelation. The
-implementation always inflates variance, producing conservative p-values for series
-with negative lag-1 autocorrelation. This is the safe direction: the implementation
-never produces false positives, but the bias is noted here for scientific completeness.
-Its practical impact is greatest for arid precipitation series, where lag-1 autocorrelation
-is typically negative.
-
-Tidemark uses `hamed_rao_modification_test(x, alpha=0.05, lag=3)` for the main
-assessment of real data, and `original_test(x)` inside the Monte Carlo loop where
-synthetic series have i.i.d. noise by construction, making the autocorrelation correction
-compute to approximately zero regardless.
+*A measured limitation.* On simulated trend-free series ($n = 45$) this test rejected
+about 7% of the time at a nominal 5% for independent noise. Tidemark's original
+automatic selection among Hamed-Rao, MKC3 and block bootstrap rejected 9 to 16% for
+skewed and autocorrelated noise. For that reason these corrections are now reported
+for comparison only, and the significance verdict comes from the bootstrap test
+described in Section 4.1.
 
 == The Detection Time Problem
 
@@ -403,33 +379,29 @@ approx 1.96 + 1.28 = 3.24 approx 3.3$ for a two-tailed test at $alpha = 0.05$
 with 90% power.
 
 The Weatherhead formula has two critical properties. First, detection time grows as
-the cube root of the noise-to-signal ratio, meaning that halving the trend doubles
-the required record length. Second, autocorrelation substantially inflates detection
+the two-thirds power of the noise-to-signal ratio, meaning that halving the trend lengthens
+the required record by about 59%. Second, autocorrelation substantially inflates detection
 time: a series with $phi = 0.5$ requires $(1.5 slash 0.5)^(1 slash 3) = 1.44$ times
 as many years as an independent series.
 
-This formula is used by NASA Goddard atmospheric scientists for satellite data planning
-and cited by multiple atmospheric science groups as the standard for detection time
-estimation. It has not, to our knowledge, been implemented in any user-facing climate
-trend analysis tool against live API data before Tidemark.
+The formula is widely used in atmospheric science to plan how long a record must be
+to detect a trend. We are not aware of a public trend tool that applies it to live
+NASA API data.
 
 == The Structural Flaw in Sequential P-Value Monitoring
 
-P-values carry a validity assumption that is violated in climate monitoring: they are
-only valid at a pre-specified sample size. When a monitoring program checks "is p
-< 0.05?" every year for 20 years, the effective false positive rate is not 5% but
-approximately 30-40% due to repeated testing.
+A p-value is valid at a sample size fixed in advance. When a monitoring programme
+asks "is p < 0.05?" again every year, the chance of at least one false alarm over the
+whole period is well above 5%.
 
-Climate monitoring is inherently sequential. National agencies, researchers, and tools
-like Tidemark's significance trajectory all check significance at multiple points in
-time. This means every existing climate trend tool has an inflated false positive rate
-when used as actually intended.
-
-The theoretically correct framework is the *e-process* [11], a nonneg
-adapted process $E_n$ such that $E[E_tau | H_0] <= 1$ for every stopping time $tau$.
-Rejecting $H_0$ when $E_n >= 1 slash alpha$ controls the false positive rate at $alpha$
-regardless of when the check is performed. Section 5.3 describes the e-process used for trend detection (valid for IID Gaussian noise;
-simulation-checked otherwise).
+Climate monitoring is inherently sequential, and a significance trajectory is itself a
+statement about repeated future tests. Tidemark handles this in two ways. In the
+Monte Carlo simulation a crossing only counts when significance persists for three
+consecutive years (Section 4.4). Separately, it reports an *e-process* [11], a
+nonnegative process $E_n$ with $E[E_tau | H_0] <= 1$ at every stopping time $tau$:
+rejecting when $E_n >= 1 slash alpha$ controls the false positive rate at $alpha$
+whenever the check is made. Section 5.3 describes the e-process used (exact for
+independent Gaussian noise; checked by simulation otherwise).
 
 // ============================================================
 // 3. DATA
@@ -437,7 +409,7 @@ simulation-checked otherwise).
 
 = Data Sources <s-data>
 
-Tidemark draws from four NASA data sources depending on the variable requested.
+Tidemark draws from five NASA data sources depending on the variable requested.
 The validation results in Section 6 (Dhaka temperature, Cairo precipitation) used
 NASA POWER (1981-2025). The Cairo POWER result is preserved as a methodology
 demonstration; the CLI now routes precipitation to GPM IMERG (2001-present).
@@ -477,8 +449,8 @@ from the MERRA-2 reanalysis, assimilating satellite and ground-based observation
       text(fill: charcoal, weight: "bold")[Unit],
       text(fill: charcoal, weight: "bold")[Coverage],
       [T2M], [Air temperature at 2 m], [degC], [1981+],
-      [T2M_MAX], [Maximum temperature at 2 m], [degC], [1981+],
-      [T2M_MIN], [Minimum temperature at 2 m], [degC], [1981+],
+      [T2M_MAX], [Monthly maximum of hourly 2 m temperature], [degC], [1981+],
+      [T2M_MIN], [Monthly minimum of hourly 2 m temperature], [degC], [1981+],
       [RH2M], [Relative humidity at 2 m], [%], [1981+],
       [EVLAND], [Evaporation over land], [mm/day], [1981+],
       [WS10M], [Wind speed at 10 m], [m/s], [1981+],
@@ -486,6 +458,13 @@ from the MERRA-2 reanalysis, assimilating satellite and ground-based observation
   ],
   caption: [NASA POWER parameters. All confirmed working against live API as of November 2026.],
 )
+
+Annual values are means of the twelve calendar months; a year is used only if complete,
+and the series is trimmed to consecutive years so that one step is always one year.
+For satellite products with missing months, each year is estimated from an additive
+year-plus-calendar-month model so that a missing month does not shift the annual value.
+Diurnal temperature range uses POWER's `T2M_RANGE`, because monthly `T2M_MAX` and
+`T2M_MIN` are the extreme hourly values of the month, not means of daily extremes.
 
 == NASA GES DISC GPM IMERG
 
@@ -514,25 +493,63 @@ and the final result to disk. Requires NASA Earthdata URS authentication.
 
 = Statistical Methods <s-stats>
 
-== Mann-Kendall and the Hamed-Rao Correction <s-mk>
+== The Significance Test <s-mk>
 
-Tidemark applies `hamed_rao_modification_test(x, alpha=0.05, lag=3)` from the
-pymannkendall library [6] to real data. Inside the Monte Carlo projection
-loop, `original_test(x)` is used instead, as synthetic extension series are generated
-with i.i.d. resampled residuals, making the autocorrelation correction compute to
-approximately zero. The switch reduces computation time for the 1,000-simulation
-loop without affecting accuracy.
+Tidemark's verdict comes from a Mann-Kendall test whose null distribution is built
+from the series itself (an AR(1) sieve bootstrap [18]):
 
-The skip threshold for insignificant lags in the Hamed-Rao calculation is
-$plus.minus 1.96 slash sqrt(n)$, which equals $plus.minus 0.292$ for $n = 45$. Any lag-1 autocorrelation
-coefficient with absolute value below this threshold is treated as zero, and the
-correction factor is 1.0, identical to the original test. For annual precipitation
-series (typical ACF range -0.2 to +0.1), the Hamed-Rao correction is inactive and
-both tests return identical results. For annual temperature series (typical ACF range
-+0.15 to +0.35), the correction may activate and can noticeably inflate the p-value.
++ Remove the Sen-slope line from the series.
++ Fit a first-order autoregression to the residuals. The lag-1 coefficient $phi$
+  is corrected for its small-sample bias by adding $(1 + 4 phi) slash n$.
++ Resample the innovations with replacement and rebuild 1,999 trend-free series
+  with the same persistence and the same innovation distribution, skew included.
++ Compute $S$ for each. The two-sided p-value is the share of bootstrap $|S|$ values
+  at least as large as the observed $|S|$.
 
-The modified test reports: trend direction, Kendall's $tau$, the normalized Z-score,
-the two-tailed p-value, and Sen's slope.
+The reported Z-score uses the bootstrap variance of $S$ with the usual continuity
+correction.
+
+We adopted this test after measuring the alternatives. Each test was run on simulated
+series with no trend, where a correct test rejects 5% of the time:
+
+#figure(
+  block(
+    fill: white,
+    stroke: 0.5pt + gray-3,
+    width: 100%,
+    clip: true,
+  )[
+    #set text(size: 9.5pt, font: "Ubuntu Sans")
+    #table(
+      columns: (2fr, 1.3fr, 1.7fr),
+      fill: thead-fill,
+      inset: (x: 10pt, y: 7pt),
+      text(fill: charcoal, weight: "bold")[Noise],
+      text(fill: charcoal, weight: "bold")[Bootstrap test],
+      text(fill: charcoal, weight: "bold")[Earlier automatic selection],
+      [Independent Gaussian], [6.4%], [6.8%],
+      [Skewed (gamma)], [6.6%], [8.8%],
+      [AR(1), phi = 0.3], [6.8%], [11.8%],
+      [AR(1), phi = 0.6], [6.2%], [16.2%],
+      [Skewed AR(1), phi = 0.2], [7.6%], [14.4%],
+    )
+  ],
+  caption: [Rejection rate at a nominal 5% on simulated trend-free series, n = 45, 500 series per row.],
+)
+
+The bootstrap test is not exact. In a separate run its rejection rate was about 11%
+for $n = 20$ with $phi = 0.6$, and for $phi = 0.8$ at $n = 45$, because $phi$ itself is
+poorly estimated for short or very persistent series. Its power is close to the
+earlier selection for independent and skewed noise (45% against 46%, and 71% against
+73%, in our tests) and lower for autocorrelated noise (37% against 57% at
+$phi = 0.5$), where the earlier figure was inflated by the higher false-alarm rate.
+
+The Hamed-Rao test (pymannkendall [6], lag = 3), MKC3 (Section 4.6) and the block
+bootstrap of Önöz and Bayazit [21] are still computed, and the one the earlier rule
+would have selected is reported next to the verdict as a comparison.
+
+The output reports: trend direction, Kendall's $tau$, the Z-score, the two-tailed
+p-value, and Sen's slope.
 
 == Sen's Slope Estimator <s-sens>
 
@@ -620,13 +637,11 @@ Additional years needed: $Delta n = n_0 dot.op [(1.96 slash |Z_0|)^(2/3) - 1]$
 
 Crossing year $= y_"last" + ceil(Delta n)$.
 
-This formula is derivable from the structure of the Mann-Kendall test but, to our
-knowledge, has not been published in usable form. Existing tools such as VSP (Pacific
-Northwest National Laboratory) answer the minimum-$n$ question via binary search
-simulation taking several seconds. This formula answers it analytically in microseconds.
+This follows directly from the structure of the Mann-Kendall test; we have not found
+it stated in this form elsewhere. It needs no simulation.
 
 It assumes Gaussian i.i.d. noise. For non-Gaussian residuals (skewed precipitation),
-it underestimates the crossing year. This is detected by the divergence check.
+it can be badly off in either direction. The divergence check flags this.
 
 === Weatherhead (1998) Detection Time
 
@@ -662,59 +677,63 @@ is the autocorrelation correction. Worked examples of the correction:
   caption: [Weatherhead autocorrelation correction factors for representative lag-1 ACF values.],
 )
 
-For $phi = 0$, the Weatherhead formula simplifies to $(3.3 sigma_N slash |omega|)^{2/3}$,
-which is within 5% of the analytical MK result for Gaussian data, providing a check
-on both formulas.
+For $phi = 0$ the formula simplifies to $(3.3 sigma_N slash |omega|)^(2 slash 3)$.
 
 The Weatherhead formula is derived for OLS regression. Applying it with Sen's slope is
 an approximation, valid because OLS slope and Sen's slope are close for data without
 extreme outliers, and the autocorrelation structure of residuals is the same regardless
 of which estimator was used.
 
-=== Monte Carlo Empirical Bootstrap
+=== Monte Carlo Simulation
 
-The empirically correct method for all noise distributions:
+The simulation extends the observed series 80 years into the future, 1,000 times:
 
 ```
-1. Compute OLS residuals of the detrended series (using Sen's slope).
-2. For each of 1,000 simulations:
-   a. Extend the series forward one year at a time.
-   b. At each step, draw a residual by sampling uniformly with
-      replacement from the observed residuals (empirical bootstrap).
-   c. Set the new observation:
-         x[n+k] = x[n] + k * beta_hat + residual[k]
-   d. Run original_test on the extended series.
-   e. Check for significance in the same direction as the observed trend.
-   f. If significant, record the current year. Stop extending.
-3. Crossing year = median of simulations that reached significance.
-4. 85% PI (predictive interval) = 7.5th to 92.5th percentile of crossing years.
+1. Fit AR(1) to the residuals about the Sen-slope line (the same fit as
+   the significance test).
+2. For each of 1,000 paths:
+   a. Draw a slope from its sampling distribution: the observed Sen slope
+      plus its standard error (inflated for autocorrelation) times a
+      Student-t draw.
+   b. Extend the series year by year: trend line plus AR(1) noise that
+      continues from the last observed residual, with innovations
+      resampled from the data.
+   c. Each year, test the extended series with the Mann-Kendall statistic
+      and the variance correction that the verdict applied to the
+      observed series.
+   d. A crossing is the first year that starts three consecutive
+      significant years in the direction of the observed trend.
+3. Paths that never cross within 80 years are kept as "never".
+4. Crossing year = median over all 1,000 paths; 85% predictive interval =
+   7.5th to 92.5th percentile. Either is reported as "beyond the horizon"
+   when it falls among the paths that never cross.
 ```
 
-The empirical bootstrap preserves the actual noise distribution, including skewness,
-heavy tails, and clustering of values. It is the only method that remains valid for
-non-Gaussian residuals (such as right-skewed arid precipitation).
+Four design points matter. The test inside the simulation is the same one that gave
+the verdict, so a series cannot "cross" merely because the simulation uses a more
+permissive test. The noise keeps the autocorrelation and skew of the data. The slope
+is drawn rather than fixed, so the interval reflects how uncertain the slope is. And
+paths that never cross are counted, so the median is not taken over the successful
+paths only.
 
-The 85% level is chosen to maintain informative intervals on planning horizons of 10 to
-50 years. This is a *predictive interval* (PI), not a confidence interval: it covers 85%
-of model-generated future trajectories under the assumed noise distribution, not a fixed
-parameter. For 1,000 simulations at 85%, the PI spans simulations 75 to 925 of the
-sorted crossing-year distribution.
+The interval is a *predictive interval*, not a confidence interval, and it is
+conditional on a trend of roughly the observed size existing. If there is in truth no
+trend, the simulation still reports that many paths cross: in our tests on trend-free
+series about 65% of paths crossed within 80 years. The projection is therefore a
+statement of the form "if the trend is what the data suggest", which the tool prints
+with every trajectory.
 
-When more than 500 of the 1,000 simulations do not reach significance within the
-60-year projection window, Tidemark reports the fraction and notes that the trajectory
-is uncertain. This case indicates a slope below the detection floor or noise distribution
-incompatible with significance on any reasonable horizon.
-
-The IID empirical bootstrap is appropriate for annual data across POWER meteorological
-variables, where lag-1 autocorrelation is typically below 0.35 and the effect of
-residual temporal clustering on crossing-year estimates is a second-order effect
-(2 to 5 years, smaller than the 85% PI width).
+We checked the calibration on simulated series with a known slope. The 85% interval
+contained the year at which fresh data actually became significant for 88% of series
+(24 series each, for independent and for AR(1) noise). The median was "never" for
+21 to 25% of them.
 
 === Cramér-Rao Lower Bound
 
 The Cramér-Rao bound (CRB) gives the theoretical minimum number of years any
 unbiased estimator could require to detect a trend of size $hat(beta)$ at significance
-level $alpha$. No statistical test, however powerful, can beat it.
+level $alpha$, if the noise density were known. Tidemark estimates that density from
+the residuals, so the printed value is an estimate of the bound, not a guarantee.
 
 For a linear trend model $Y_t = omega dot.op t + epsilon_t$ with noise density
 $f(epsilon)$ having Fisher information $I(f) = integral [f'(x)]^2 / f(x) d x$:
@@ -743,7 +762,7 @@ If divergence exceeds five years, the methods are flagged as diverging. Tidemark
 then diagnoses the cause by computing:
 
 - Residual skewness (Pearson's third standardized moment)
-- Shapiro-Wilk normality test p-value
+- D'Agostino-Pearson normality test p-value
 - Lag-1 ACF of residuals
 
 If skewness exceeds 1.0 or the normality test fails at p#h(0.05em)<#h(0.05em)0.05,
@@ -758,41 +777,31 @@ distribution is the culprit.
 
 == MKC3 Third-Order Cumulant Variance Correction <s-mkc3>
 
-The Hamed-Rao correction accounts for autocorrelation but uses only second-order
-statistics: the lag-$k$ autocorrelation $rho_k$. For right-skewed series (precipitation,
-NDVI, ET in arid regions), the skewness of lag products introduces an additional
-systematic bias into $"Var"(S)$ that $rho_k$ cannot capture. The result is
-underestimation of $"Var"(S)$, inflated Z-scores, and false positives. For Cairo
-precipitation (skewness $approx 1.95$), Hamed-Rao gives $p approx 0.03$ when the
-corrected $p > 0.10$.
+The Hamed-Rao correction uses only second-order statistics, the lag-$k$
+autocorrelations. Then and Abdul Halim (2025) [16] add a third-order term intended for
+skewed series. With $n slash n_S$ the Hamed-Rao factor of Section 2.2 computed on the
+ranks of the Sen-detrended series, and $z_t$ those ranks standardized:
 
-Then et al. (2025) [16] introduced the third-order cumulant correction. Define
-$hat(epsilon)_t = x_t - hat(beta) dot.op t$ as the Sen-slope residuals. The corrected
-variance is:
+$ Phi_3 = frac(1, n-2) sum_(t=1)^(n-2) z_t z_(t+1) z_(t+2) $ <eq:c3>
 
-$ "Var"_"MKC3"(S) = "Var"_"HR"(S) + C_3 $ <eq:var-mkc3>
+$ "Var"_"MKC3"(S) = "Var"(S) dot.op lr((frac(n, n_S) + Phi_3)) $ <eq:var-mkc3>
 
-where:
+Because $Phi_3$ is computed on standardized ranks it has no units, so the result does
+not depend on the units of the data. (An earlier version of Tidemark used a cumulant
+of the raw residuals, which did; this was a defect and has been corrected.) The paper
+is ambiguous on whether the cumulant uses ranks or detrended values; Tidemark uses
+ranks.
 
-$ C_3 = 2 sum_(k=1)^(n-1) (n-k) w_k hat(kappa)_3 (k) $ <eq:c3>
-
-with $hat(kappa)_3 (k) = (1 slash n) sum_t hat(epsilon)_t^2 hat(epsilon)_(t+k)$
-(the sample third-order lag-$k$ cumulant) and $w_k = 1 - k slash (n+1)$ (the same
-Bartlett taper as Hamed-Rao).
-
-For symmetric distributions, $kappa_3(k) = 0$ for all $k$ and MKC3 reduces exactly to
-Hamed-Rao. For right-skewed residuals, $kappa_3(k) > 0$, inflating $"Var"(S)$ relative
-to HR, which decreases Z and reduces false positives.
-
-Tidemark applies MKC3 automatically when $|"skewness"(hat(epsilon))| > 0.5$ and
-$n >= 20$; otherwise Hamed-Rao is used. No Python package implements this correction;
-Tidemark is the first open implementation. The test method is printed on every output
-line so the user always knows which correction was applied.
+On simulated trend-free data MKC3 rejected about 8% of skewed independent series and
+14 to 15% of skewed series with AR(1) $phi = 0.2$ ($n = 30$ to $60$) at a nominal 5%.
+Tidemark therefore reports MKC3 as a comparison when $|"skewness"| > 0.5$ and the
+residual autocorrelation is low, and does not use it for the verdict. We are not aware
+of another open Python implementation.
 
 == Partial Mann-Kendall with ENSO Control <s-pmk>
 
-ENSO (El Niño--Southern Oscillation) explains 15--40% of interannual variability in
-tropical precipitation and vegetation [17]. Applied to raw data, the Mann-Kendall test
+ENSO (El Niño--Southern Oscillation) explains a substantial share of interannual variability in
+tropical precipitation and vegetation. Applied to raw data, the Mann-Kendall test
 conflates the anthropogenic trend with ENSO-induced low-frequency variability. A trend
 that exists may be missed (ENSO masks it) or spuriously detected (ENSO drives it).
 
@@ -805,7 +814,7 @@ Define $h_k (x) = sum_(j != k) "sgn"(x_k - x_j)$ (the net concordance of observa
 $k$ with all others). The rank-based cross-covariance between target series $x$ and
 ENSO index $q$ is:
 
-$ sigma_(x q) = frac(1, 3) sum_k h_k (x) dot.op h_k (q) $ <eq:sigma-xq>
+$ sigma_(x q) = frac(1, 3) lr((K_(x q) + sum_k h_k (x) dot.op h_k (q))), quad K_(x q) = sum_(i < j) "sgn"(x_j - x_i) "sgn"(q_j - q_i) $ <eq:sigma-xq>
 
 The partial MK statistic removing the ENSO effect and its variance are:
 
@@ -825,67 +834,56 @@ if the raw test is not significant but the ENSO-adjusted test is, Tidemark repor
 "anthropogenic trend exists, masked by ENSO"; the reverse reads "apparent trend may be
 ENSO-driven"; agreement reads "trend robust to ENSO correction."
 
-== Bayesian Changepoint Detection (NIG Marginal Likelihood) <s-bocpd>
+The regression-based ENSO correction also reports ENSO's share of interannual variance,
+defined as the partial $R^2$ of the ENSO index given the linear trend.
 
-The Mann-Kendall test reports the net trend across the full series. It cannot detect
-whether the trend structure shifted at some point, and when that shift occurred. For a
-series with a structural break, the pre- and post-break slopes may partially cancel,
-biasing the MK statistic. Knowing *when* the trend changed is often the most policy-relevant
-finding: it identifies the year a regime shift occurred, allows attribution to external
-forcing events, and contextualizes the net MK result.
+== Trend-Break Detection <s-bocpd>
 
-Tidemark implements a retrospective Bayesian changepoint scan. For every candidate split
-year $t \in \{3, \ldots, n-3\}$, the log Bayes factor of the two-segment model against
-the full-series model is:
+The Mann-Kendall test reports the net trend across the full series. It cannot say
+whether the trend changed at some point. Two classical changepoint tools are unsuitable
+for trending data: the Pettitt test and mean-shift Bayesian models both take "no change
+in level" as their null hypothesis, and a steady trend violates it. An earlier version
+of Tidemark used both, and on simulated series with a plain linear trend and no break
+they reported a changepoint in more than 99% of cases. Both were replaced.
 
-$ "log BF"(t) = log P(x_(1:t)) + log P(x_(t+1:n)) - log P(x_(1:n)) $ <eq:bocpd-bf>
+Tidemark now asks a different question: do two straight lines, split at some year,
+fit significantly better than one?
 
-Each marginal likelihood $P(x_(1:m))$ is computed in closed form under a Normal-Inverse-Gamma
-(NIG) conjugate model with an uninformative Jeffreys-like prior ($mu_0 = 0$, $kappa_0 = 1$,
-$alpha_0 = 1$, $beta_0 = 1$). The NIG log marginal likelihood is [18]:
+*sup-F test.* For every split year $k$ leaving at least five observations on each
+side, with $"RSS"_0$ the residual sum of squares of one line and $"RSS"_1(k)$ that of
+two separate lines:
 
-$ log P(x_(1:m)) = lg Gamma(alpha_n) - lg Gamma(alpha_0)
-  + alpha_0 log beta_0 - alpha_n log beta_n
-  + frac(1,2) log frac(kappa_0, kappa_n) - frac(m, 2) log pi $ <eq:nig-lml>
+$ F(k) = frac(("RSS"_0 - "RSS"_1(k)) slash 2, "RSS"_1(k) slash (n - 4)), quad "sup" F = max_k F(k) $ <eq:supf>
 
-where the posterior hyperparameters are:
-$kappa_n = kappa_0 + m$,
-$mu_n = (kappa_0 mu_0 + sum x) / kappa_n$,
-$alpha_n = alpha_0 + m/2$,
-$beta_n = beta_0 + frac{1}{2}(sum x^2 + kappa_0 mu_0^2 - kappa_n mu_n^2)$.
+This is the statistic of Andrews (1993) [19]. Its p-value is obtained by bootstrap:
+series are regenerated under "one line plus AR(1) noise" fitted to the data, and the
+statistic is recomputed for each. Persistent noise, which resembles a break, is thus
+part of the null.
 
-The series is z-scored before the scan so the prior location $mu_0 = 0$ is innocuous.
-The best split is $t^* = arg max_t "log BF"(t)$.
+*Bayesian scan.* For each split year the log Bayes factor of two lines against one is
 
-A changepoint is reported when $"log BF"(t^*) > 3.0$. The threshold 3.0 is calibrated
-empirically: for $n = 44$ i.i.d. standard normal series, the p97 of the maximum log BF
-under the null (no changepoint) is approximately 3.0. This corresponds to moderate-to-strong
-evidence on the Jeffreys scale ($"log BF" > "ln"(20) approx 3.0$ is "strong").
+$ "log BF"(k) = log P(x_(1:k)) + log P(x_(k+1:n)) - log P(x_(1:n)) $ <eq:bocpd-bf>
 
-The confidence at the detected year is mapped via a logistic transform:
+where each $P$ is the closed-form marginal likelihood of a straight-line regression
+under a conjugate Normal-Inverse-Gamma prior [20], computed on standardized residuals
+of the one-line fit so that units and trend size do not matter. A break is reported
+when the maximum exceeds 3.5 and also exceeds the 95th percentile of the same maximum
+under the bootstrap null above. A logistic transform of the excess over 3.5 is printed
+as a confidence figure, capped at 99%; it is a display scale, not a posterior
+probability.
 
-$ "confidence" = frac(e^{"log BF" - 3}, 1 + e^{"log BF" - 3}) $ <eq:bocpd-conf>
+On simulated series ($n = 45$, 400 per case) both detectors reported a break in 1 to
+4% of series with a steady trend, including skewed noise and AR(1) noise up to
+$phi = 0.6$. Power is moderate for an abrupt step (33 to 44% for a step of 2.5 noise
+standard deviations) and higher for a change of slope (56 to 86%), because a step
+looks like persistence to the AR(1) null.
 
-which gives 50% at the detection edge, 88% at log BF = 5, and saturates at 99% above log BF ≈ 8.
+After detection, Tidemark fits a line to each segment and reports the slopes before
+and after.
 
-After detection, Tidemark fits OLS regression to the pre-break and post-break segments
-(minimum 5 observations each) and reports the slope change, noting whether the trend
-steepened, weakened, or reversed.
-
-Validation: Dhaka temperature (n = 44 annual observations, 1981--2024) detects a
-structural break at 1997 with log BF = 18.0 (99% confidence). The pre-1997 slope is
-+0.055 °C/year (warming); post-1997 is approximately zero (flat to cooling). This is
-consistent with aerosol-driven regional cooling onset in South Asia documented in the
-literature, and contextualizes the net MK result ($p = 0.047$, barely significant):
-the two regimes partially cancel in the net statistic.
-
-The implementation uses only numpy and scipy. The `fast-bocpd` package (the original
-plan, based on Adams & MacKay 2007 sequential BOCPD) requires compiled C extensions and
-cannot build on Windows without Microsoft Visual C++ 14.0+. The retrospective NIG scan
-is statistically superior for the single-changepoint detection problem: the sequential
-formulation has a fundamental upper bound on the per-step probability that is too low
-for typical climate series lengths, while the retrospective marginal likelihood comparison
-has no such constraint and directly maximizes the split-year evidence.
+Example: Dhaka 2 m air temperature (1981-2025). The sup-F test reports a break in 1997
+($p = 0.006$). The Bayesian scan does not flag it. We report both and do not claim a
+physical cause.
 
 // ============================================================
 // 5. NOVEL CONTRIBUTIONS
@@ -918,9 +916,12 @@ The significance trajectory answers three linked questions in a single output bl
   $hat(Y)^*$: $hat(x)_(hat(Y)^*) = x_n + (hat(Y)^* - y_"last") dot.op hat(beta)$.
 
 + *When will the trend cross real-world critical thresholds?* After significance,
-  the Sen's slope projection is extended to named thresholds: Paris Agreement
-  +1.5 degC warming, agricultural evaporation stress levels, drought classification
-  precipitation deficits. These are printed as milestone lines in the output.
+  the Sen's slope projection is extended to named thresholds: local warming of
+  +1.5 degC relative to the start of the local record, evaporation stress levels, drought
+  precipitation deficits. These are printed as milestone lines in the output. Projections
+  start from the fitted trend line, not from the last observed year, and the local
+  warming figures are not the Paris Agreement targets, which refer to global mean
+  temperature.
 
 The relationship between p-value and record length under a consistent trend is
 well-understood theoretically, as expressed in the $n^(3/2)$ Z-score growth rate
@@ -930,40 +931,28 @@ distributions, and the four-method cross-validation to expose when the parametri
 approximations break down.
 
 The concept has academic precedent in the ozone monitoring literature [4].
-It has not been implemented as a general-purpose tool for hydroclimatic trend analysis
+We are not aware of a general-purpose tool for hydroclimatic trend analysis that is
 accessible to non-specialist users.
 
-== The Earth System Scan <s-scan>
+== A System View <s-scan>
 
-The challenge prompt specifies an *Earth System* Trend Detective. The emphasis on
-"system" is deliberate: Dr. Aker is an oceanographer who thinks in interconnected
-variables. Temperature drives evaporation. Evaporation modulates humidity. Humidity
-conditions precipitation. Analyzing variables in isolation misses this structure.
-
-Tidemark's `scan` subcommand analyzes all POWER variables for a location in a
-single command, producing a system fingerprint:
+The challenge asks for an *Earth System* trend detective. Variables are linked:
+temperature drives evaporation, evaporation modulates humidity, humidity conditions
+precipitation. Tidemark analyses one variable per run; running it across variables
+for one location gives a system view. For Dhaka (NASA POWER, 1981-2025):
 
 ```
-$ tidemark scan --location dhaka
-
-location   Dhaka, Bangladesh  (23.81 N, 90.41 E)
-period     1981 - 2025  (45 years)
-
-variable          direction   slope           p-value    status
-temperature       downward    -0.021 C/yr     0.047      significant
-evaporation       rising      +0.008 mm/d/yr  0.041      significant
-humidity          falling     -0.11 %/yr      0.112      ~2031 (MC: 2029-2034)
-precipitation     rising      +0.0003 mm/d/yr 0.74       ~2051 (weak signal)
-wind              falling     -0.002 m/s/yr   0.33       ~2039
-
-system note   2 of 5 variables significant. Humidity crossing projected
-              2031. Precipitation below detection floor (0.25x): weak signal
-              may not resolve without additional 10 years of data.
+variable        slope               p-value   floor ratio
+temperature     -0.021 C/yr         0.037     1.6x
+evaporation     +0.028 mm/d/yr      0.004     2.6x
+humidity        +0.35 %/yr          0.002     3.2x
+wind            -0.013 m/s/yr       < 0.001   2.6x
+precipitation   +0.10 mm/d/yr       < 0.001   2.3x
 ```
 
-The system scan gives a complete picture at a glance: which Earth system variables are
-already significant, which are trending but sub-threshold, which are below the detection
-floor, and which will cross significance first.
+All five are significant. An earlier version of Tidemark had a `scan` subcommand
+that produced such a table in one command; it has been removed from the CLI, and the
+table above was assembled from single-variable runs.
 
 == The Trend E-process <s-arep>
 
@@ -985,35 +974,29 @@ also when checked every year. Details and derivation are in `research/stats/arep
 For autocorrelated noise the series is Prais-Winsten whitened with an estimated lag-1
 coefficient; this carries no exact guarantee. Simulated false-positive rates at
 $E_n >= 20$ ($n = 30, 45, 60$): IID Gaussian $<= 0.2%$, skewed $<= 0.1%$, AR(1)
-$phi = 0.3$: $<= 0.7%$, $phi = 0.6$: $<= 2.2%$. The rule is conservative: for a trend that
-Mann-Kendall detects about half the time, the e-process fires about 9% of the time.
+$phi = 0.3$: $<= 0.9%$, $phi = 0.6$: $<= 2.2%$. The rule is conservative: for a trend that
+Mann-Kendall detects about half the time, the e-process fires about 10% of the time.
 It is an evidence measure to read next to the p-value, not a more sensitive test.
 
-== MKC3 Variance Correction <s-novel-mkc3>
+== MKC3 and Block Bootstrap Implementations <s-novel-mkc3>
 
-No existing climate trend tool selects variance correction based on residual skewness.
-Tidemark is the first tool to implement the Then et al. (2025) correction [16] and the
-first to apply it in a live-data pipeline against real NASA satellite data.
+Tidemark includes open Python implementations of the MKC3 correction [16] and of the
+block bootstrap Mann-Kendall test [21]; we are not aware of earlier ones (R's
+`modifiedmk` package provides the block bootstrap). Both are reported as comparisons
+next to the verdict. Sections 4.1 and 4.6 give their measured false-alarm rates, which
+is why neither decides significance.
 
-For Cairo precipitation (skewness = 1.95), the correction changes the significance
-verdict from $p = 0.03$ (significant under Hamed-Rao) to $p > 0.10$ (not significant
-under MKC3). This is not a marginal refinement; it is the difference between a reported
-finding and a non-finding. The dispatch is fully automatic: when
-$|"skewness"(hat(epsilon))| > 0.5$ and $n >= 20$, MKC3 is applied; otherwise Hamed-Rao.
-No user setting is required.
-
-The correction also closes the gap between the parametric Gaussian formula and Monte
-Carlo for right-skewed series. When MKC3 and Monte Carlo independently agree that Cairo
-precipitation is not significant, the user has two confirmations from independent methods.
-No existing tool produces this cross-validation for skewed series.
+For Cairo precipitation (skewness 1.95, residual lag-1 autocorrelation 0.50) the
+verdict is $p = 0.75$ and the comparison (block bootstrap) gives $p = 0.74$: the
+methods agree that there is no detectable trend.
 
 == Partial Mann-Kendall ENSO Separation <s-novel-pmk>
 
-No existing live-data climate trend tool provides a nonparametric ENSO separation test.
-Tidemark's partial Mann-Kendall answers the question scientists care about most: is this
+We are not aware of a live-data climate trend tool that provides a nonparametric ENSO separation test.
+Tidemark's partial Mann-Kendall addresses a common question: is this
 trend real, or is ENSO driving it? The rank-based construction (Libiseller & Grimvall,
 2002) [17] requires no assumption about the form of the ENSO-climate relationship, making
-it valid even where the coupling is nonlinear. The same ENSO data fetched for the OLS
+it usable where the coupling is monotonic but not linear. The same ENSO data fetched for the OLS
 correction is reused, adding no API calls.
 
 The partial MK output complements the OLS ENSO correction already in Tidemark. When
@@ -1021,26 +1004,16 @@ the two methods agree (both show the ENSO-adjusted trend significant, raw not), 
 nonparametric confirmation strengthens the conclusion. The rank-based approach is more
 credible than the parametric correction for variables with nonlinear ENSO coupling.
 
-== Bayesian Changepoint Detection <s-novel-bocpd>
+== Trend-Break Detection <s-novel-bocpd>
 
-No existing live-data Earth system trend tool answers the question of *when* the trend
-structure changed and provides a calibrated Bayesian confidence for that year. The two
-closest methods are the Pettitt test (a rank-based test for a single distributional
-shift in the median) and binary segmentation (sequential splitting with an information
-criterion). Both are frequentist and do not produce a Bayes factor or confidence interval.
-
-Tidemark's NIG marginal likelihood scan answers a different question: at what year is the
-evidence strongest that the data before that year and after that year are better explained
-as two independent Gaussian processes than as one? The log Bayes factor is on an absolute
-scale (Jeffreys 1961), interpretable without null-hypothesis testing machinery. A log BF of
-18.0 for the Dhaka temperature break (1997) is an overwhelming result — the two-segment
-model is $e^{18} approx 65$ million times more probable than the one-segment model.
-
-The output is richer than any existing changepoint method: detected year, log BF,
-calibrated confidence (%), and regime slopes before and after the break with steepening/
-weakening/reversal note. The web interface adds a log BF scan chart showing the evidence
-at every candidate split year, which lets the user see whether the peak is sharp (clear
-break) or broad (gradual transition).
+Most accessible changepoint tools test for a shift in level, which a steady trend
+triggers. Tidemark's two detectors (Section 4.8) take a single straight line as the
+null, calibrate against autocorrelated noise, and were checked on simulated steady
+trends, where they stay at or below the nominal false-alarm rate. The output gives the
+detected year, the p-value of the sup-F test, the log Bayes factor, and the slope
+before and after. The web interface plots the log Bayes factor for every candidate
+year, which shows whether the evidence is concentrated on one year or spread over
+several.
 
 // ============================================================
 // 6. VALIDATION RESULTS
@@ -1072,8 +1045,8 @@ hydroclimatic spectrum.
       text(fill: charcoal, weight: "bold")[p-value],
       text(fill: charcoal, weight: "bold")[Status],
       text(fill: charcoal, weight: "bold")[Floor ratio],
-      [Dhaka, T2M (degC/yr)],           [-0.021], [-0.361], [-1.98], [0.047], [Significant], [1.56x],
-      [Cairo, PRECTOTCORR (mm/d/yr)],   [+0.0009], [+0.07], [+0.33], [0.74],  [Not yet],     [0.25x],
+      [Dhaka, T2M (degC/yr)],           [-0.021], [-0.361], [-2.06], [0.037], [Significant], [1.57x],
+      [Cairo, PRECTOTCORR (mm/d/yr)],   [+0.0009], [+0.07], [+0.34], [0.75],  [Not significant], [0.18x],
     )
   ],
   caption: [Main validation results, NASA POWER 1981-2025 (n = 45 annual observations per location).],
@@ -1081,30 +1054,26 @@ hydroclimatic spectrum.
 
 == Dhaka Temperature: Significant Trend
 
-The Modified Mann-Kendall (Hamed-Rao, lag = 3) test detects a significant trend in
-Dhaka's 2 m air temperature: $p = 0.047$, $tau = -0.361$, $hat(beta) = -0.021$
-deg C/year (downward direction). The lag-1 autocorrelation of residuals is $phi = 0.47$,
-indicating substantial positive autocorrelation. The Hamed-Rao correction is active
-for this series.
+The bootstrap Mann-Kendall test finds a significant trend in Dhaka's 2 m air
+temperature: $p = 0.037$, $tau = -0.361$, $hat(beta) = -0.021$ deg C/year (downward).
+The lag-1 autocorrelation of residuals is $phi = 0.47$. The comparison test (block
+bootstrap) gives $p = 0.040$. The floor ratio is 1.57: the slope is 1.57 times the
+detection floor. The trend-break test finds a break in 1997 ($p = 0.006$); the
+Bayesian scan does not flag one. The partial Mann-Kendall test controlling for ENSO
+remains significant ($p = 0.004$), while the regression-corrected series gives
+$p = 0.06$, so the result is close to the threshold and should be read that way.
 
-The floor ratio of 1.56 indicates the trend is 1.56 times above the detection floor,
-confirming that the signal is detectable at the current record length.
+A note on interpretation: a downward temperature trend in Dhaka is not what global
+warming narratives would suggest. These are MERRA-2 reanalysis values for a 0.5 degree
+grid cell, not station measurements, and regional aerosol effects on South Asian
+temperature have been discussed in the literature. Tidemark reports what the data
+show; physical interpretation is the analyst's responsibility.
 
-A note on interpretation: the downward temperature trend in Dhaka contradicts the
-expectation one might form from global warming narratives. This is consistent with
-aerosol-driven regional cooling documented in South Asian climate literature, where
-particulate pollution and land-use change modify local temperature trends independently
-of the global surface temperature signal. Tidemark reports what the data show.
-Physical interpretation is the analyst's responsibility.
+== Cairo Precipitation: Not Significant
 
-== Cairo Precipitation: Not Yet Significant
-
-Cairo's precipitation trend shows a weak upward slope ($hat(beta) = +0.0009$
-mm/day/year) with $p = 0.74$. The floor ratio of 0.25 indicates the trend is at
-one-quarter of the detection floor: the current 45-year record cannot resolve this
-signal even if the underlying trend is real.
-
-Four-method cross-validation for Cairo:
+Cairo's precipitation shows a weak upward slope ($hat(beta) = +0.0009$ mm/day/year)
+with $p = 0.75$. The floor ratio of 0.18 means the slope is less than a fifth of what
+a 45-year record can resolve.
 
 #figure(
   block(
@@ -1115,35 +1084,31 @@ Four-method cross-validation for Cairo:
   )[
     #set text(size: 9.5pt, font: "Ubuntu Sans")
     #table(
-      columns: (2fr, 1.5fr, 2.5fr, 1fr),
+      columns: (2fr, 2.2fr, 2.5fr),
       fill: thead-fill,
       inset: (x: 10pt, y: 7pt),
       text(fill: charcoal, weight: "bold")[Method],
       text(fill: charcoal, weight: "bold")[Crossing year],
       text(fill: charcoal, weight: "bold")[Assumptions],
-      text(fill: charcoal, weight: "bold")[Valid?],
-      [Analytical MK ($n^(3/2)$ formula)], [2128], [Gaussian i.i.d.], [Invalid],
-      [Weatherhead (1998)], [2123], [Gaussian, OLS], [Invalid],
-      [Monte Carlo (n = 1,000)], [2051], [Empirical bootstrap], [Valid],
+      [Analytical MK ($n^(3/2)$ formula)], [2125], [Gaussian, independent noise],
+      [Weatherhead (1998)], [2078], [Gaussian, AR(1)],
+      [Cramér-Rao bound], [2063], [Estimated noise density],
+      [Monte Carlo (1,000 paths)], [Median beyond 2105; 85% interval starts 2042], [AR(1), resampled innovations, slope uncertainty],
     )
   ],
-  caption: [Four-method comparison for Cairo precipitation. Divergence = 77 years.],
+  caption: [Four-method comparison for Cairo precipitation (NASA POWER, 1981-2025).],
 )
 
-Divergence is 77 years, well above the 5-year threshold. Diagnosis: residual skewness = 1.95, Shapiro-Wilk normality $p < 0.001$. The residuals are strongly non-Gaussian,
-right-skewed as expected for a near-zero arid precipitation series. Methods 1 and 2,
-which assume Gaussian noise, underestimate the crossing year by 77 years. The Monte
-Carlo estimate of 2051 (85% PI: 2036-2068) is the trusted result.
+The estimates span more than sixty years, and in the Monte Carlo simulation 51.5% of
+paths never become significant within the 80-year horizon. The residuals are strongly
+non-Gaussian (skewness 1.95, normality test $p < 0.001$), as expected for a series
+that is near zero in most years. The honest summary is that this record cannot say
+when, or whether, a trend will be confirmed. Both break detectors report a change
+around 2016 (sup-F $p = 0.011$, log BF = 24), driven by a few wet years late in the
+record.
 
-All 1,000 Monte Carlo simulations reached significance within the 60-year projection
-window. The 85% PI spans 32 years, reflecting genuine uncertainty about the future
-noise realizations rather than any weakness in the method.
-
-This Cairo result illustrates the key practical finding of the four-method framework:
-the methods do not agree because the noise distribution is not Gaussian. The divergence
-is not an error. It is a diagnostic. It tells the user that the standard parametric
-formulas are inapplicable here, and that precipitation in Cairo is harder to track
-to significance than a Gaussian analysis would suggest.
+The disagreement between methods is not an error. It is the diagnostic: the standard
+formulas assume noise that this series does not have.
 
 // ============================================================
 // 7. CASE STUDY: BANGLADESH
@@ -1164,37 +1129,9 @@ planning horizon is long, the exposure is high, and the question of *when* each 
 becomes statistically confirmed matters for resource allocation across different
 time windows.
 
-== Earth System Scan: Dhaka
+== Five Variables for Dhaka
 
-Applying the full Earth system scan to Dhaka (23.81 N, 90.41 E), 1981-2025:
-
-```
-location   Dhaka, Bangladesh  (23.81 N, 90.41 E)
-period     1981 - 2025  (45 years, POWER); 2001 - 2025  (25 years, GPM)
-
-variable          direction   slope           p-value    significance
-temperature       downward    -0.021 C/yr     0.047      significant
-evaporation       rising      +0.008 mm/d/yr  0.041      significant
-humidity          falling     -0.11 %/yr      0.112      ~2031 (MC 85% PI: 2029-2034)
-wind              falling     -0.002 m/s/yr   0.33       ~2039
-precipitation     downward    -0.016 mm/d/yr  0.385      ~2037 (GPM 2001-2025, 0.23x floor)
-
-system note   2 of 5 variables significant. Earliest next crossing: humidity
-              ~2031. Precipitation (GPM IMERG, 25 years): floor ratio 0.23,
-              weak signal below detection threshold. Evaporation already
-              significant: land moisture budget is changing.
-```
-
-Two variables are already statistically significant: temperature (downward trend,
-consistent with aerosol-driven regional cooling) and evaporation (upward trend,
-consistent with increased land surface drying). Three are trending but accumulating
-evidence.
-
-== Significance Crossing Timeline
-
-The Bangladesh Delta Plan 2100 specifies adaptation milestones at 2030, 2050, and 2100.
-The projected significance crossing years from the Earth system scan map directly onto
-this framework:
+Applying Tidemark to five NASA POWER variables for Dhaka (23.81 N, 90.41 E), 1981-2025:
 
 #figure(
   block(
@@ -1205,36 +1142,41 @@ this framework:
   )[
     #set text(size: 9.5pt, font: "Ubuntu Sans")
     #table(
-      columns: (1.5fr, 1fr, 1fr, 1.5fr, 1.5fr),
+      columns: (2fr, 1.4fr, 1fr, 1fr, 1.5fr),
       fill: thead-fill,
       inset: (x: 7pt, y: 6pt),
       text(fill: charcoal, weight: "bold")[Variable],
-      text(fill: charcoal, weight: "bold")[p-value],
       text(fill: charcoal, weight: "bold")[Slope],
-      text(fill: charcoal, weight: "bold")[Status],
-      text(fill: charcoal, weight: "bold")[Crossing year (MC)],
-      [Temperature (T2M)],      [0.047], [-0.021 C/yr],     [Significant],             [N/A],
-      [Evaporation (EVLAND)],   [0.041], [+0.008 mm/d/yr],  [Significant],             [N/A],
-      [Humidity (RH2M)],        [0.112], [-0.11 %/yr],      [Trending, p > 0.05],      [~2031 (PI: 2029-2034)],
-      [Wind (WS10M)],           [0.33],  [-0.002 m/s/yr],   [Trending, p > 0.05],      [~2039],
-      [Precipitation (PRECTOTCORR)], [0.385], [-0.016 mm/d/yr], [Below floor (0.23x)], [~2037 (GPM 2001-2025)],
+      text(fill: charcoal, weight: "bold")[p-value],
+      text(fill: charcoal, weight: "bold")[Floor ratio],
+      text(fill: charcoal, weight: "bold")[Trend break],
+      [Temperature (T2M)],           [-0.021 C/yr],     [0.037],   [1.6x], [1997 (p = 0.006)],
+      [Evaporation (EVLAND)],        [+0.028 mm/d/yr],  [0.004],   [2.6x], [None],
+      [Humidity (RH2M)],             [+0.35 %/yr],      [0.002],   [3.2x], [1997 (p = 0.036)],
+      [Wind (WS10M)],                [-0.013 m/s/yr],   [< 0.001], [2.6x], [None],
+      [Precipitation (PRECTOTCORR)], [+0.10 mm/d/yr],   [< 0.001], [2.3x], [None],
     )
   ],
-  caption: [Significance crossing projections for Dhaka, Bangladesh (1981-2025). Monte Carlo n=1000, 85% PI.],
+  caption: [Trend results for Dhaka, NASA POWER (MERRA-2), 1981-2025, n = 45.],
 )
 
-The two already-significant variables (temperature, evaporation) indicate a detectable
-change in the land energy and moisture budget. The three not-yet-significant variables
-span three distinct regimes: a near-threshold series (humidity, ~5 years), a weak-signal
-series above the floor (wind, ~13 years), and a below-floor series (precipitation,
-GPM IMERG 2001-2025, floor ratio 0.23) where the 25-year record cannot resolve the
-signal regardless of direction.
+All five variables show a significant trend, each above its detection floor: cooling,
+with rising evaporation, humidity and precipitation and falling wind speed. For a
+planner this is the first useful statement the tool makes: for these variables at
+this location the question is no longer whether a change is detectable but how fast it
+is proceeding. Temperature and humidity both show a break in the trend line in 1997.
 
-The precipitation result is the most consequential. Evaporation is already significantly
-elevated, implying increased land surface drying. If the precipitation signal is not yet
-detectable, the drying is not yet confirmed by the precipitation side of the water
-balance. That gap -- detectable evaporation change, unresolved precipitation change --
-is precisely the ambiguity that the significance trajectory quantifies.
+Three cautions apply. These are reanalysis values for one grid cell of about 55 km,
+not station data. Five tests were run, so the chance that at least one is a false
+alarm is higher than for a single test, although four of the five p-values are far
+below 0.05. And precipitation here is the MERRA-2 corrected product; the CLI routes
+precipitation to GPM IMERG, whose record starts in 2001 and is too short to compare
+directly.
+
+For locations and variables where the trend is not yet significant, the significance
+trajectory supplies the missing piece. Cairo humidity is an example (Appendix A):
+$p = 0.22$, with a Monte Carlo median crossing year of 2039 and an 85% interval from
+2030 to beyond 2105.
 
 // ============================================================
 // 8. DISCUSSION
@@ -1264,19 +1206,19 @@ is precisely the ambiguity that the significance trajectory quantifies.
       text(fill: charcoal, weight: "bold")[Trajectory / CI],
       text(fill: charcoal, weight: "bold")[MKC3],
       text(fill: charcoal, weight: "bold")[Partial MK],
-      text(fill: charcoal, weight: "bold")[Bayesian CP],
+      text(fill: charcoal, weight: "bold")[Trend break],
       [NASA Giovanni], [OLS only], [No], [No], [No], [No], [No], [No], [No],
       [NOAA Climate Explorer], [Yes], [No], [Yes], [No], [No], [No], [No], [No],
       [Copernicus CDS Toolbox], [Yes], [Optional], [Yes], [No], [No], [No], [No], [No],
-      [*Tidemark*], [*Hamed-Rao*], [*Yes*], [*Yes*], [*Yes (3-method)*], [*Yes*], [*Yes (auto)*], [*Yes (rank)*], [*Yes (NIG)*],
+      [*Tidemark*], [*Bootstrap MK*], [*Yes*], [*Yes*], [*Yes (4-method)*], [*Yes*], [*Yes (comparison)*], [*Yes*], [*Yes (two-line)*],
     )
   ],
-  caption: [Feature comparison against publicly accessible climate trend analysis tools.],
+  caption: [Feature comparison against publicly accessible climate trend analysis tools, based on our reading of each tool's public documentation.],
 )
 
 Tidemark is the only tool in this comparison that answers the detection-time question
 and provides a significance trajectory with a predictive interval. The four-method
-cross-validation and divergence detection are not present in any existing tool.
+cross-validation and divergence detection are, as far as we know, not offered elsewhere.
 
 == Known Limitations
 
@@ -1287,18 +1229,24 @@ point-scale precision, in situ station data should be used.
 
 *Single-variable independence assumption.* The significance trajectory is computed
 independently per variable. Cross-variable interactions (temperature driving
-evaporation, evaporation affecting humidity) are described in the system scan output
-but are not modeled in the trajectory simulation.
+evaporation, evaporation affecting humidity) are not modeled, neither in the tests
+nor in the trajectory simulation.
 
 *Constant-slope extrapolation.* The Monte Carlo simulation extends the series assuming
-the Sen's slope remains constant into the future. If the underlying trend accelerates
+a linear trend continues, with the slope drawn from its sampling uncertainty. If the underlying trend accelerates
 or reverses, the crossing-year estimate will be biased accordingly. This is a standard
 limitation of linear trend projection.
 
-*pymannkendall autocorrelation direction bug.* Documented in Section 2.2 and in the
-library source. The impact is bounded: Tidemark will never report a false positive due
-to this implementation choice, but may report a slightly conservative p-value for
-series with negative lag-1 autocorrelation.
+*Calibration of the tests.* No test here is exact. The bootstrap significance test
+rejects 6 to 8% of trend-free series at a nominal 5% for 45-year records and about 11%
+for very short or very persistent ones. The Monte Carlo trajectory is conditional on a
+trend of about the observed size. The e-process is exact only for independent Gaussian
+noise and has low power. All rates quoted in this paper come from simulation with a
+few hundred to a few thousand series per case and carry sampling error of one to two
+percentage points.
+
+*Multiple testing.* Each variable is tested on its own. When several variables or
+locations are examined, some significant results are expected by chance.
 
 *NDVI via ORNL DAAC MODIS.* Vegetation index (NDVI) is now available using the ORNL
 DAAC MODIS Web Service (MOD13Q1, 250m, 16-day composites, 2000-present, no authentication).
@@ -1318,57 +1266,38 @@ a climate trend will cross the statistical significance threshold, together with
 the variable will look like when it does and when it will cross critical real-world
 thresholds beyond that.
 
-The principal technical contributions are:
+The principal contributions are:
 
-+ The *analytical $n^(3/2)$ crossing formula*, derived from the structure of the
-  Mann-Kendall test, computable in microseconds, and not previously published in usable
-  form.
++ The *significance trajectory* with four estimates of the crossing year: the
+  analytical $n^(3/2)$ formula, Weatherhead (1998), a Monte Carlo simulation that keeps
+  autocorrelation, slope uncertainty and never-crossing paths, and a Cramér-Rao bound
+  estimated from the residuals; with a report of when and why they disagree.
 
-+ The *Cramér-Rao lower bound for trend detection time*, computed from residual Fisher
-  information, that sets the theoretical minimum years any test could require and
-  exposes when parametric formulas are pessimistic for non-Gaussian noise.
++ The *detection floor*, which separates "not significant" from "below what this
+  record length can resolve".
 
-+ The *four-method cross-validation framework*, combining the analytical formula,
-  Weatherhead (1998), Monte Carlo empirical bootstrap, and Cramér-Rao lower bound,
-  with divergence detection that identifies non-Gaussian noise and routes the user
-  to the correct estimate.
++ A *significance test chosen by measurement*: a bootstrap Mann-Kendall test that
+  rejects 6 to 8% of trend-free series where our earlier method selection rejected
+  7 to 16%.
 
-+ The *detection floor*, derived from the analytical formula, printed unconditionally
-  to contextualize every result and distinguish "not significant" from "below the
-  detection threshold of the current record."
++ A *trend-break test* with a straight line as its null, replacing changepoint
+  detectors that reported a break in over 99% of steady trends.
 
-+ The *Earth system scan*, analyzing all POWER meteorological variables for a location
-  in a single command and producing a system fingerprint that directly implements the
-  "Earth System Trend Detective" challenge framing.
++ *ENSO separation* by regression and by the partial Mann-Kendall test, and a
+  *mixture e-process* for trend that is exact for independent Gaussian noise.
 
-+ A *mixture-Bayes-factor e-process* for linear trend, with intercept and scale integrated
-  out by invariance; anytime-valid for IID Gaussian noise, simulation-checked for
-  autocorrelated and skewed noise.
++ Open implementations of the *MKC3* and *block bootstrap* Mann-Kendall variants,
+  reported for comparison.
 
-+ The *MKC3 third-order cumulant variance correction* (Then et al., 2025): the first
-  open implementation, applied automatically for skewed residuals ($|"skewness"| > 0.5$),
-  eliminating a systematic false-positive bias in Hamed-Rao for precipitation and
-  vegetation series.
-
-+ The *partial Mann-Kendall ENSO separation* (Libiseller & Grimvall, 2002): the first
-  live-data nonparametric ENSO isolation test, separating anthropogenic trend signal
-  from ENSO-induced variability without distributional assumptions.
-
-+ The *Bayesian changepoint detection scan* (NIG marginal likelihood, Chib, 1998): the
-  first live-data Earth system trend tool to answer *when* the trend structure changed,
-  using the closed-form Normal-Inverse-Gamma marginal likelihood to compute log Bayes
-  factors at every candidate split year, with calibrated confidence and regime slopes.
-
-Validation against real NASA POWER data for Dhaka (significant cooling trend, $p =
-0.047$; Bayesian changepoint 1997, log BF = 18.0, 99% confidence) and Cairo
-(non-Gaussian precipitation, MC crossing year 2051 with 85% PI 2036-2068) confirms the
-pipeline. The Bangladesh case study shows two of five key
-climate variables already significant, with humidity projected to reach significance
-around 2031 and precipitation not until approximately 2051 given current signal
-strength.
+On NASA POWER data, Dhaka shows significant trends in all five variables examined
+(temperature $p = 0.037$, with a trend break in 1997), and Cairo precipitation shows
+none ($p = 0.75$, 0.18 of the detection floor), with the four trajectory methods
+disagreeing by decades. The most important result of the project is methodological:
+several of our original statistics did not survive testing against simulated data, and
+the ones reported here are those that did, with their measured error rates stated.
 
 The tool is built in Rust (CLI binary and argument parsing) with a Python statistics
-engine (pymannkendall, numpy, scipy, pandas, requests). Temperature, humidity, wind,
+engine (pymannkendall, numpy, scipy, requests). Temperature, humidity, wind,
 and soil results are reproducible from open NASA POWER data with no authentication.
 Precipitation (GPM IMERG) and satellite thermal variables (AppEEARS MODIS) require
 a NASA Earthdata account, which is free to create.
@@ -1446,9 +1375,9 @@ a NASA Earthdata account, which is free to create.
 ]
 
 #refentry[
-  [11] Ramdas, A., Ruf, J., Larsson, M., and Koolen, W. (2023). Testing exchangeability:
-  Fork-convexity, supermartingales and e-processes. _International Statistical Review_,
-  91(1), 1-29. doi:10.1111/insr.12490
+  [11] Ramdas, A., Grünwald, P., Vovk, V., and Shafer, G. (2023). Game-theoretic statistics
+  and safe anytime-valid inference. _Statistical Science_, 38(4), 576-601.
+  doi:10.1214/23-STS894
 ]
 
 #refentry[
@@ -1475,9 +1404,9 @@ a NASA Earthdata account, which is free to create.
 ]
 
 #refentry[
-  [16] Then, W., Hashim, R., and Alias, N.E. (2025). Modified Mann-Kendall test with
-  higher-order statistics for trend analysis in hydroclimatic time series. _Scientific
-  Reports_, 15, 7892. doi:10.1038/s41598-025-30034-0
+  [16] Then, Y.J. and Abdul Halim, S. (2025). Modified Mann-Kendall with
+  higher-order statistics for trend analysis. _Scientific
+  Reports_, 16, 500. doi:10.1038/s41598-025-30034-0
 ]
 
 #refentry[
@@ -1487,19 +1416,24 @@ a NASA Earthdata account, which is free to create.
 ]
 
 #refentry[
-  [18] Chib, S. (1998). Estimation and comparison of multiple change-point models.
-  _Journal of Econometrics_, 86(2), 221-241. doi:10.1016/S0304-4076(97)00115-2
+  [18] Bühlmann, P. (1997). Sieve bootstrap for time series. _Bernoulli_, 3(2), 123-148.
 ]
 
 #refentry[
-  [19] Murphy, K.P. (2007). Conjugate Bayesian analysis of the Gaussian distribution.
+  [19] Andrews, D.W.K. (1993). Tests for parameter instability and structural change with
+  unknown change point. _Econometrica_, 61(4), 821-856.
+]
+
+#refentry[
+  [20] Murphy, K.P. (2007). Conjugate Bayesian analysis of the Gaussian distribution.
   Technical report, University of British Columbia.
   cs.ubc.ca/~murphyk/Papers/bayesGauss.pdf
 ]
 
 #refentry[
-  [20] Adams, R.P. and MacKay, D.J.C. (2007). Bayesian online changepoint detection.
-  arXiv:0710.3742.
+  [21] Önöz, B. and Bayazit, M. (2012). Block bootstrap for Mann-Kendall trend test of
+  serially dependent data. _Hydrological Processes_, 26(23), 3552-3560.
+  doi:10.1002/hyp.8358
 ]
 
 // ============================================================
@@ -1515,10 +1449,12 @@ a NASA Earthdata account, which is free to create.
 cargo install --path .
 
 # Python statistics engine dependencies
-pip install pymannkendall numpy scipy pandas requests
+pip install pymannkendall numpy scipy requests flask
 ```
 
 == Analyze a Single Variable
+
+Output of the current version (abbreviated; seasonal and ENSO blocks omitted):
 
 ```
 $ tidemark analyze --location dhaka --var temperature
@@ -1526,63 +1462,55 @@ $ tidemark analyze --location dhaka --var temperature
 location    Dhaka, Bangladesh  (23.81 N, 90.41 E)
 variable    temperature (T2M, C)
 period      1981 - 2025  (45 years)
-test        Modified Mann-Kendall (Hamed-Rao, lag=3)
+test        Mann-Kendall, AR(1) sieve bootstrap
 
-trend       -0.021 C / year
+trend       -0.0211 C / year
 direction   downward
-tau         -0.361
-z-score     -1.98
-p-value     0.047   significant (p < 0.05)
-detection floor     +-0.013 C / year   (slope is 1.6x above floor)
+tau         -0.36
+z-score     -2.06
+p-value     0.0365   significant (p < 0.05)
+e-process   E_n = 4.8   threshold: 20   (iid-Gaussian null, level 0.05)
 
-trend test (raw)        z = -1.98   p = 0.047    significant
-trend test (ENSO-adj)   z = -2.73   p = 0.00632  significant
+trend test (raw)        z = -2.06   p = 0.0365    significant
+trend test (ENSO-adj)   z = -2.87   p = 0.00417   significant
 
-ENSO explains 13% of concordance variance
+ENSO explains 12% of concordance variance
 interpretation: trend robust to ENSO correction
-  note   projection assumes observed trend continues at measured rate -- not a forecast
+detection floor         +-0.0134 C / year   (slope is 1.6x above floor)
+changepoint 1997   (sup-F break test p=0.005)
 ```
-
-(no milestones block: cooling direction has no applicable standard thresholds)
 
 == Analyze a Not-Yet-Significant Variable
 
-Note: the output below is from the archived NASA POWER run (1981-2025). The current CLI
-routes `--var rainfall` to GPM IMERG (2001-present); running this command live will show
-a 25-year GPM series. The POWER result is preserved here as a methodology demonstration.
-
 ```
-$ tidemark analyze --location cairo --var rainfall
+$ tidemark analyze --location cairo --var humidity
 
 location    Cairo, Egypt  (30.06 N, 31.25 E)
-variable    precipitation (PRECTOTCORR, mm/day)
+variable    humidity (RH2M, %)
 period      1981 - 2025  (45 years)
-test        Modified Mann-Kendall (MKC3, Then 2025)
+test        Mann-Kendall, AR(1) sieve bootstrap
 
-trend       +0.0009 mm/day / year
+trend       +0.0388 % / year
 direction   upward
-tau         0.07
-z-score     0.33
-p-value     0.74   not yet significant (p > 0.05)
-detection floor     +-0.0037 mm/day / year   (slope is 0.25x floor, below sensitivity)
+tau         0.19
+z-score     1.27
+p-value     0.215   not yet significant (p > 0.05)
+detection floor         +-0.0532 % / year   (slope is 0.7x floor, weak signal)
 
 significance trajectory:
-  analytical MK     2128   (n^1.5 growth formula, assumes Gaussian IID -- invalid here)
-  Weatherhead 1998  2123   (OLS detection time -- also assumes Gaussian -- invalid here)
-  Monte Carlo       2051   (n=1000, empirical bootstrap)
-  methods diverge: 77 years
-  reason: residual skewness=1.95, normality p<0.001 -- non-Gaussian noise
-  trust: Monte Carlo
-  85% PI            2036 -- 2068
+  analytical MK     2041
+  Weatherhead 1998  2025
+  Monte Carlo       2039
+  CRB lower bound   2025
+  methods diverge: 16 years
+  reason: residual skewness=-0.58, normality p=0.037, non-Gaussian noise
+  85% PI            2030 - beyond 2105
+  note   862/1000 simulations become significant within 80 years
   note   projection assumes observed trend continues at measured rate -- not a forecast
 ```
 
-== Earth System Scan
-
-```
-$ tidemark scan --location dhaka
-$ tidemark scan --lat 23.81 --lon 90.41
-```
+The Monte Carlo figures change by a year or two between runs because the simulation
+is not seeded.
 
 == Variable Aliases
 
@@ -1607,10 +1535,10 @@ Precipitation, LST, and ET require NASA Earthdata credentials
 
 = Appendix: Reproducibility Checklist <appendix-b>
 
-The Dhaka temperature result can be reproduced from open NASA POWER data with no account.
-Precipitation (GPM IMERG) and LST/ET (AppEEARS MODIS) require NASA Earthdata credentials.
-The Cairo precipitation result below was run against NASA POWER (pre-GPM routing) and
-is preserved as a methodology validation; live CLI results use GPM IMERG instead.
+The results in Sections 6 and 7 use NASA POWER data and need no account. Products from
+GPM IMERG, AppEEARS and LAADS require NASA Earthdata credentials. The CLI routes
+`--var rainfall` to GPM IMERG; the POWER precipitation results in this paper were
+obtained by running the same analysis on the POWER `PRECTOTCORR` series.
 
 == Software Versions
 
@@ -1618,68 +1546,42 @@ is preserved as a methodology validation; live CLI results use GPM IMERG instead
 Rust 1.82+
 Python 3.11+
 pymannkendall 1.4.3
-numpy 1.26
-scipy 1.12
-pandas 2.0
-requests 2.31
-```
-
-== Reproduce Cairo Result
-
-```
-python python/analyze.py \
-  --lat 30.06 --lon 31.25 \
-  --var PRECTOTCORR \
-  --start 1981 --end 2025
-```
-
-Expected JSON output (abbreviated):
-```json
-{
-  "trend": "increasing",
-  "slope": 0.0009,
-  "p": 0.74,
-  "tau": 0.07,
-  "significance_year_mc": 2051,
-  "pi_low_85": 2036,
-  "pi_high_85": 2068,
-  "skewness": 1.95,
-  "normality_p": 0.00031,
-  "methods_diverge": true,
-  "trust": "monte_carlo"
-}
+numpy 2.2
+scipy 1.15
 ```
 
 == Reproduce Dhaka Temperature Result
 
 ```
-python python/analyze.py \
-  --lat 23.81 --lon 90.41 \
-  --var T2M \
-  --start 1981 --end 2025
+python python/analyze.py --lat 23.81 --lon 90.41 --var T2M --start 1981 --end 2025
 ```
 
 Expected JSON output (abbreviated):
 ```json
 {
-  "trend": "decreasing",
-  "slope": -0.021,
-  "p": 0.047,
+  "slope": -0.0211,
   "tau": -0.361,
+  "z_score": -2.06,
+  "p_value": 0.0365,
   "significant": true,
+  "method": "Mann-Kendall, AR(1) sieve bootstrap",
   "phi": 0.47,
-  "floor_ratio": 1.56
+  "floor_ratio": 1.57,
+  "changepoint": {"detected": true, "year": 1997, "p": 0.0055}
 }
 ```
 
 == Reproducibility Checklist
 
-- Code publicly available on GitHub (username: raiyanruhan)
+- Code publicly available on GitHub (github.com/raiyanruhan/tidemark)
 - Data sources documented with API endpoint and parameters
 - Software versions specified above
-- No API key or registration required
-- Both validation results (Cairo, Dhaka) confirmed against live API as of November 2026
-- All 1,000 Monte Carlo seeds: `np.random.seed` not fixed. Results are statistically
-  stable; CI bounds reported are median across five independent runs
+- POWER variables need no API key or registration
+- Bootstrap tests use a fixed random seed, so p-values are repeatable. The Monte Carlo
+  trajectory is not seeded; its median and interval vary by a year or two between runs
+- Results confirmed against the live POWER API in November 2026; later reprocessing of
+  MERRA-2 may change the values slightly
+- Simulation figures (false-alarm rates, power, interval coverage) were produced with
+  ad hoc scripts during development and are not yet part of the repository
 
 #v(1.2cm)
