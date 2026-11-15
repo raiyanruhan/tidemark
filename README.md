@@ -47,7 +47,7 @@
 > Tidemark was built for NASA Space Apps Challenge 2026 - "Be An Earth System Trend Detective".
 > It is not an open source library. The repository contains the full implementation and whitepaper.
 
-Every existing climate trend tool reports the same thing: significant or not. That binary omits three things - how much more data is needed before a not-yet-significant trend becomes detectable, whether the current record is long enough to resolve the signal at all, and when a significant trend will cross real-world thresholds.
+Most climate trend tools report the same thing: significant or not. That binary omits three things - how much more data is needed before a not-yet-significant trend becomes detectable, whether the current record is long enough to resolve the signal at all, and when a significant trend will cross real-world thresholds.
 
 Tidemark answers all three. It runs the Mann-Kendall test with an AR(1) sieve-bootstrap null, so the significance verdict accounts for the series' own autocorrelation and skew (the Hamed-Rao, MKC3 and block-bootstrap variants are reported alongside for comparison) — computes the detection floor unconditionally, runs four independent crossing-year estimates with divergence detection, separates anthropogenic trend signal from ENSO variability using a rank-based partial Mann-Kendall test, and detects structural breaks in the time series using a Bayesian changepoint scan (one trend line vs two, conjugate NIG marginal likelihoods) that answers when the trend changed, not just whether it exists.
 
@@ -59,27 +59,26 @@ variable    precipitation (PRECTOTCORR, mm/day)
 period      1981 - 2025  (45 years)
 
 trend       +0.0009 mm/day / year
-p-value     0.74   not yet significant
-detection floor     +-0.0037 mm/day / year   (slope is 0.25x floor)
+p-value     0.75   not yet significant
+detection floor     +-0.005 mm/day / year   (slope is 0.18x floor)
 
 significance trajectory:
-  analytical MK     2128   (Gaussian IID - invalid here)
-  Weatherhead 1998  2123   (Gaussian - invalid here)
-  Monte Carlo       2051   (n=1000, empirical bootstrap)
-  CRB lower bound   2047   (Fisher information floor, any test)
-  methods diverge: 77 years
+  analytical MK     2125   (Gaussian IID - invalid here)
+  Weatherhead 1998  2078   (Gaussian - invalid here)
+  Monte Carlo       >2105  (n=1000, AR(1) simulation; 51.5% of paths never cross)
+  CRB lower bound   2063   (Fisher information floor, any test)
+  methods diverge: decades
   reason: residual skewness=1.95, normality p<0.001
-  trust: Monte Carlo
-  85% PI            2036 - 2068
+  85% PI            2042 - beyond horizon
 ```
 
-The 77-year divergence between methods is a diagnostic. Cairo residuals are right-skewed. The standard formulas assume bell-curve noise and return a confident wrong answer. Tidemark detects this automatically and routes to the correct estimate. For precipitation and other skewed variables, Tidemark applies the MKC3 variance correction (Then et al. 2025) instead of Hamed-Rao, eliminating the false-positive bias that inflated that p-value in the first place.
+The divergence between methods is a diagnostic. Cairo residuals are right-skewed (skewness 1.95). The standard formulas assume bell-curve noise and give a confident wrong answer. More than half the Monte Carlo simulations never cross within the 80-year horizon: the record cannot say when significance will arrive. Tidemark shows all estimates alongside their assumptions so you can judge the uncertainty. For precipitation and other skewed variables, Tidemark computes the MKC3 variance correction (Then et al. 2025) alongside Hamed-Rao for comparison.
 
 ## Build
 
 ```
 cargo build --release
-pip install pymannkendall numpy scipy requests pandas
+pip install pymannkendall numpy scipy requests
 ```
 
 Requires Python 3.10+ and Rust 1.70+. Temperature, humidity, wind, and soil variables use the open NASA POWER API with no credentials. Precipitation (GPM IMERG) and remote sensing variables (AppEEARS MODIS) require a free NASA Earthdata account.
@@ -136,9 +135,9 @@ Tidemark applies the following statistical methods automatically:
 
 **Significance verdict.** The verdict comes from a Mann-Kendall test whose null distribution is bootstrapped from the series itself: the Sen-slope line is removed, an AR(1) model is fitted to the residuals, and trend-free series are rebuilt by resampling its innovations. On simulated trend-free data (n = 45) it rejects 6–8% of the time at a nominal 5%, for independent, skewed and autocorrelated noise alike; the three variance-correction variants below reject 7–16% on the same data, so they are now reported for comparison (`method_comparison` in the JSON) rather than used for the verdict. Calibration degrades for short or very persistent series (n = 20 or φ ≥ 0.8: about 11%).
 
-**Block Bootstrap MK** (Önöz, B. and Bayazit, M., *Hydrological Processes* 2012) is the comparison variant when |φ| > 0.3. Hamed-Rao assumes AR(1) dependence — a single lag-1 coefficient captures all autocorrelation. This fails for soil moisture (long memory, significant lags to 6–12 months), NDVI (lag-12 seasonality), and ET (inherits dependence from both temperature and precipitation). Block bootstrap resamples contiguous blocks of residuals, preserving the full within-block dependence structure without assuming any parametric form. Block length is selected automatically via the Politis-Romano bandwidth estimator. Only R's `modifiedmk::bbsmk` implements this; Tidemark is the first Python implementation.
+**Block Bootstrap MK** (Önöz, B. and Bayazit, M., *Hydrological Processes* 2012) is the comparison variant when |φ| > 0.3. Hamed-Rao assumes AR(1) dependence — a single lag-1 coefficient captures all autocorrelation. This fails for soil moisture (long memory, significant lags to 6–12 months), NDVI (lag-12 seasonality), and ET (inherits dependence from both temperature and precipitation). Block bootstrap resamples contiguous blocks of residuals, preserving the full within-block dependence structure without assuming any parametric form. Block length is selected automatically via the Politis-Romano bandwidth estimator. Only R's `modifiedmk::bbsmk` implements this; we are not aware of another Python implementation.
 
-**MKC3** (Then, Y.J. and Abdul Halim, S., *Scientific Reports* 2025) adds a third-order cumulant term to the Hamed-Rao variance for right-skewed series. Comparison variant when |φ| ≤ 0.3 and |skewness| > 0.5. For Cairo precipitation (skewness≈1.95), Hamed-Rao gives p≈0.03 (significant); MKC3 gives p>0.10 (not significant, correct). No Python package implements this; Tidemark is the first open implementation.
+**MKC3** (Then, Y.J. and Abdul Halim, S., *Scientific Reports* 2025) adds a third-order cumulant term to the Hamed-Rao variance for right-skewed series. Comparison variant when |φ| ≤ 0.3 and |skewness| > 0.5. We are not aware of another open Python implementation.
 
 **Innovative Trend Analysis** (Şen, Z., *Journal of Hydrological Engineering* 2012) detects non-monotonic sub-population trends that Mann-Kendall cannot see. The series is split into two halves, each sorted in ascending order, and compared rank by rank. When the driest years are drying while the wettest years are intensifying, the net MK statistic is near zero (no trend) but ITA reveals the divergence. Output includes tercile slopes (low / mid / high value years) and a scatter plot showing both halves against the 1:1 diagonal. Shown only when low and high tercile slopes have opposite signs.
 

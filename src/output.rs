@@ -336,17 +336,17 @@ fn print_trajectory(json: &serde_json::Value) {
         if utdt_year.is_some() {
             print_traj_row("Weatherhead uTDT", utdt_year, &utdt_note);
         }
-        print_traj_row("Monte Carlo", mc_median, "n=1000, empirical bootstrap");
+        print_traj_row("Monte Carlo", mc_median, "n=1000, AR(1) simulation");
         print_traj_row("CRB lower bound", crb_year, "Fisher information floor, any test");
         println!("  methods agree, consistent estimate");
     } else {
-        print_traj_row("analytical MK", analytical, "assumes Gaussian IID, invalid here");
+        print_traj_row("analytical MK", analytical, "assumes Gaussian IID");
         print_traj_row("Weatherhead 1998", weatherhead,
             "OLS formula with MK parameters, assumes Gaussian, also invalid");
         if utdt_year.is_some() {
             print_traj_row("Weatherhead uTDT", utdt_year, &utdt_note);
         }
-        print_traj_row("Monte Carlo", mc_median, "n=1000, empirical bootstrap, correct");
+        print_traj_row("Monte Carlo", mc_median, "n=1000, AR(1) simulation");
         print_traj_row("CRB lower bound", crb_year, "Fisher information floor, any test");
         println!("  methods diverge: {} years", divergence);
         let norm_display = fmt_normality_p(normality_p);
