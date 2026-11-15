@@ -82,7 +82,8 @@ EP_THRESHOLD = 20.0
 def _logsumexp(a, axis=None):
     m = np.max(a, axis=axis, keepdims=True)
     out = np.log(np.sum(np.exp(a - m), axis=axis, keepdims=True)) + m
-    return out if axis is None else np.squeeze(out, axis=axis)
+    # axis=None: return a true scalar (numpy >= 2.4 refuses float() on a 1-element array)
+    return float(out.reshape(-1)[0]) if axis is None else np.squeeze(out, axis=axis)
 
 
 def _ep_ar1_phi(y):
